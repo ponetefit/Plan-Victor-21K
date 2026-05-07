@@ -193,7 +193,12 @@
       transition: border-color .2s, background .2s, opacity .3s;
     }
     .card:hover { border-color: rgba(249,115,22,.25); background: var(--surface2); }
-    .card.done  { border-left: 3px solid var(--green); opacity: .68; }
+    .card.done    { border-left: 3px solid var(--green); opacity: .68; }
+    .card.skipped {
+      border-left: 3px solid #f59e0b;
+      background: rgba(245,158,11,.04);
+      opacity: .72;
+    }
     .card.race  {
       background: linear-gradient(135deg, rgba(249,115,22,.07), var(--surface));
       border-color: var(--orange);
@@ -295,6 +300,52 @@
       color: var(--green); letter-spacing: .1em;
     }
 
+    /* ── Skip button ── */
+    .skip-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .52rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: transparent;
+      border: 1px solid #2d4262;
+      color: var(--muted);
+      padding: 4px 11px; border-radius: 7px;
+      cursor: pointer; transition: all .2s;
+      white-space: nowrap;
+    }
+    .skip-btn:hover       { border-color: #f59e0b; color: #f59e0b; }
+    .skip-btn.is-skipped  { border-color: #f59e0b44; color: #f59e0b; background: rgba(245,158,11,.08); }
+    .skip-btn:disabled    { opacity: .35; cursor: default; }
+
+    /* skipped reason input */
+    .reason-wrap {
+      margin-top: 9px;
+      display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+    }
+    .reason-input {
+      flex: 1; min-width: 160px;
+      background: #020617;
+      border: 1px solid #f59e0b44;
+      border-radius: 8px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: .82rem; font-weight: 600;
+      color: #f59e0b;
+      padding: 5px 10px;
+      transition: border-color .2s;
+    }
+    .reason-input::placeholder { color: #3d5a80; }
+    .reason-input:focus { outline: none; border-color: #f59e0b; }
+    .reason-input:disabled { opacity: .4; cursor: default; }
+
+    /* skipped tag shown in view mode */
+    .skipped-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(245,158,11,.1);
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: 8px; padding: 4px 10px;
+      font-size: .75rem; font-weight: 700; color: #f59e0b;
+      margin-top: 8px;
+    }
+
     /* ── Read-only banner ── */
     .readonly-banner {
       margin-top: 26px;
@@ -346,7 +397,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="stats">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr)">
       <div class="stat-box">
         <div class="stat-val" id="statPct">0%</div>
         <div class="stat-lbl">Progreso</div>
@@ -356,8 +407,12 @@
         <div class="stat-lbl">KM corridos</div>
       </div>
       <div class="stat-box">
-        <div class="stat-val" id="statSes">0/17</div>
-        <div class="stat-lbl">Sesiones</div>
+        <div class="stat-val" id="statSes" style="color:var(--green)">0</div>
+        <div class="stat-lbl">Completadas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statSkip" style="color:#f59e0b">0</div>
+        <div class="stat-lbl">Salteadas</div>
       </div>
     </div>
 
@@ -438,7 +493,7 @@ const FOCUS_COLORS = {
 /* ─────────────────────────────────────────
    STATE
 ───────────────────────────────────────── */
-let state     = { completed:[], km:{}, time:{} };
+let state     = { completed:[], skipped:[], reasons:{}, km:{}, time:{} };
 let viewMode  = false;
 let saveTimer = null;
 let isConnected = false;
@@ -463,6 +518,8 @@ ref.on('value', snap => {
   if (val) {
     state = {
       completed: val.completed || [],
+      skipped:   val.skipped   || [],
+      reasons:   val.reasons   || {},
       km:        val.km        || {},
       time:      val.time      || {}
     };
@@ -500,22 +557,61 @@ function persist() {
 function toggleWeek(id) {
   if (viewMode) return;
   const idx = state.completed.indexOf(id);
-  if (idx > -1) state.completed.splice(idx, 1);
-  else          state.completed.push(id);
+  if (idx > -1) {
+    state.completed.splice(idx, 1);
+  } else {
+    state.completed.push(id);
+    // if completing, remove from skipped
+    const si = state.skipped.indexOf(id);
+    if (si > -1) { state.skipped.splice(si, 1); delete state.reasons[id]; }
+  }
   persist();
   renderStats();
-  // update just this card style
-  const card = document.getElementById('card-' + id);
-  if (card) {
-    const week = plan.find(w => w.id === id);
-    const done = state.completed.includes(id);
-    card.className = `card${done ? ' done' : ''}${week.isRace ? ' race' : ''}`;
-  }
+  refreshCardClass(id);
 }
 
-/* ─────────────────────────────────────────
-   UPDATE field (km or time)
-───────────────────────────────────────── */
+function toggleSkip(id) {
+  if (viewMode) return;
+  const si = state.skipped.indexOf(id);
+  if (si > -1) {
+    state.skipped.splice(si, 1);
+    delete state.reasons[id];
+  } else {
+    state.skipped.push(id);
+    // remove from completed if was completed
+    const ci = state.completed.indexOf(id);
+    if (ci > -1) state.completed.splice(ci, 1);
+  }
+  persist();
+  renderStats();
+  refreshCardClass(id);
+  // show/hide reason row
+  const reasonRow = document.getElementById('reason-row-' + id);
+  const skipBtn   = document.getElementById('skip-btn-' + id);
+  const cbx       = document.getElementById('cb-' + id);
+  const isSkipped = state.skipped.includes(id);
+  if (reasonRow) reasonRow.style.display = isSkipped ? 'flex' : 'none';
+  if (skipBtn)   skipBtn.className = 'skip-btn' + (isSkipped ? ' is-skipped' : '');
+  if (cbx)       cbx.disabled = isSkipped;
+}
+
+function updateReason(id, val) {
+  if (viewMode) return;
+  if (val.trim() === '') delete state.reasons[id];
+  else state.reasons[id] = val.trim();
+  persist();
+}
+
+function refreshCardClass(id) {
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const week    = plan.find(w => w.id === id);
+  const done    = state.completed.includes(id);
+  const skipped = state.skipped.includes(id);
+  card.className = `card${done ? ' done' : ''}${skipped ? ' skipped' : ''}${week.isRace ? ' race' : ''}`;
+}
+
+
 function updateKm(id, val) {
   if (viewMode) return;
   if (val === '') delete state.km[id];
@@ -571,13 +667,16 @@ function updateMiniBar(id) {
    STATS
 ───────────────────────────────────────── */
 function renderStats() {
-  const pct    = Math.round((state.completed.length / plan.length) * 100);
-  const totalKm= Object.values(state.km).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  document.getElementById('statPct').textContent  = pct + '%';
-  document.getElementById('statKm').textContent   = totalKm % 1 === 0 ? totalKm : totalKm.toFixed(1);
-  document.getElementById('statSes').textContent  = state.completed.length + '/17';
-  document.getElementById('progFill').style.width = pct + '%';
-  document.getElementById('progText').textContent = 'PROGRESO: ' + pct + '%';
+  const done    = state.completed.length;
+  const skipped = state.skipped.length;
+  const pct     = Math.round((done / plan.length) * 100);
+  const totalKm = Object.values(state.km).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  document.getElementById('statPct').textContent   = pct + '%';
+  document.getElementById('statKm').textContent    = totalKm % 1 === 0 ? totalKm : totalKm.toFixed(1);
+  document.getElementById('statSes').textContent   = done;
+  document.getElementById('statSkip').textContent  = skipped;
+  document.getElementById('progFill').style.width  = pct + '%';
+  document.getElementById('progText').textContent  = `COMPLETADAS: ${done} · SALTEADAS: ${skipped}`;
 }
 
 /* ─────────────────────────────────────────
@@ -587,10 +686,17 @@ function updateCards() {
   plan.forEach(week => {
     const card = document.getElementById('card-' + week.id);
     if (!card) return;
-    const done = state.completed.includes(week.id);
-    card.className = `card${done ? ' done' : ''}${week.isRace ? ' race' : ''}`;
-    const cb = card.querySelector('input[type=checkbox]');
-    if (cb) cb.checked = done;
+    const done    = state.completed.includes(week.id);
+    const skipped = state.skipped.includes(week.id);
+    card.className = `card${done ? ' done' : ''}${skipped ? ' skipped' : ''}${week.isRace ? ' race' : ''}`;
+    const cb = document.getElementById('cb-' + week.id);
+    if (cb) { cb.checked = done; cb.disabled = skipped || viewMode; }
+    const skipBtn = document.getElementById('skip-btn-' + week.id);
+    if (skipBtn) { skipBtn.className = 'skip-btn' + (skipped ? ' is-skipped' : ''); skipBtn.disabled = viewMode; }
+    const reasonRow = document.getElementById('reason-row-' + week.id);
+    if (reasonRow) reasonRow.style.display = skipped ? 'flex' : 'none';
+    const reasonIn = document.getElementById('reason-' + week.id);
+    if (reasonIn && document.activeElement !== reasonIn) reasonIn.value = state.reasons[week.id] || '';
     const kmInput = document.getElementById('km-' + week.id);
     if (kmInput && document.activeElement !== kmInput) kmInput.value = state.km[week.id] || '';
     const tmInput = document.getElementById('tm-' + week.id);
@@ -617,50 +723,71 @@ function renderPlan() {
     group.className = 'cards';
 
     plan.filter(w => w.mes === mes).forEach(week => {
-      const done   = state.completed.includes(week.id);
-      const kmVal  = state.km[week.id]   || '';
-      const tmVal  = state.time[week.id] || '';
-      const kmNum  = parseFloat(kmVal) || 0;
-      const kmPct  = Math.min(100, (kmNum / week.distNum) * 100);
-      const fColor = FOCUS_COLORS[week.focus] || '#3d5a80';
-      const pace   = calcPace(week.id);
-      const dis    = viewMode ? 'disabled' : '';
+      const done    = state.completed.includes(week.id);
+      const skipped = state.skipped.includes(week.id);
+      const kmVal   = state.km[week.id]     || '';
+      const tmVal   = state.time[week.id]   || '';
+      const reason  = state.reasons[week.id] || '';
+      const kmNum   = parseFloat(kmVal) || 0;
+      const kmPct   = Math.min(100, (kmNum / week.distNum) * 100);
+      const fColor  = FOCUS_COLORS[week.focus] || '#3d5a80';
+      const pace    = calcPace(week.id);
+      const dis     = viewMode ? 'disabled' : '';
+      const cbDis   = (viewMode || skipped) ? 'disabled' : '';
 
       const card = document.createElement('div');
       card.id        = 'card-' + week.id;
-      card.className = `card${done ? ' done' : ''}${week.isRace ? ' race' : ''}`;
+      card.className = `card${done ? ' done' : ''}${skipped ? ' skipped' : ''}${week.isRace ? ' race' : ''}`;
 
       card.innerHTML = `
-        <input type="checkbox" ${done ? 'checked' : ''} ${dis} onchange="toggleWeek(${week.id})" />
+        <input id="cb-${week.id}" type="checkbox" ${done ? 'checked' : ''} ${cbDis} onchange="toggleWeek(${week.id})" />
         <div class="card-body">
           ${week.isRace ? `<div class="race-banner">🏁 DÍA DE CARRERA</div>` : ''}
           <div class="card-top">
             <span class="card-date">${week.mes} · ${week.fecha}</span>
-            <span class="focus-badge" style="color:${fColor};border-color:${fColor}44;background:${fColor}11">${week.focus}</span>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span class="focus-badge" style="color:${fColor};border-color:${fColor}44;background:${fColor}11">${week.focus}</span>
+              <button id="skip-btn-${week.id}" class="skip-btn ${skipped ? 'is-skipped' : ''}" ${dis} onclick="toggleSkip(${week.id})">
+                ${skipped ? '↩ Deshacer' : '✕ Salteada'}
+              </button>
+            </div>
           </div>
           <div class="card-title">${week.dist} — ${week.tipo}</div>
           <div class="card-desc">${week.desc}</div>
 
-          <div class="fields">
-            <div class="field-group">
-              <span class="field-lbl">KM:</span>
-              <input id="km-${week.id}" type="number" min="0" max="99" step="0.1"
-                     placeholder="${week.distNum}" value="${kmVal}"
-                     class="field-input km-col" style="width:72px"
-                     ${dis} oninput="updateKm(${week.id}, this.value)" />
-              <span class="field-unit">/${week.distNum}</span>
-            </div>
-            <div class="field-group">
-              <span class="field-lbl">TIEMPO:</span>
-              <input id="tm-${week.id}" type="text"
-                     placeholder="0:00:00" value="${tmVal}"
-                     class="field-input time-col" style="width:98px"
-                     ${dis} oninput="updateTime(${week.id}, this.value)" />
-            </div>
+          <!-- Reason row (only visible when skipped) -->
+          <div id="reason-row-${week.id}" class="reason-wrap" style="display:${skipped ? 'flex' : 'none'}">
+            <span class="field-lbl" style="color:#f59e0b">Motivo:</span>
+            <input id="reason-${week.id}" type="text"
+                   placeholder="ej: viaje, lesión, lluvia..."
+                   value="${reason}"
+                   class="reason-input"
+                   ${dis}
+                   oninput="updateReason(${week.id}, this.value)" />
           </div>
 
-          <div class="mini-bar"><div class="mini-fill" id="minibar-${week.id}" style="width:${kmPct}%"></div></div>
-          <div class="pace-tag" id="pace-${week.id}">${pace}</div>
+          <!-- KM + Tiempo (hidden when skipped) -->
+          <div style="display:${skipped ? 'none' : 'block'}">
+            <div class="fields">
+              <div class="field-group">
+                <span class="field-lbl">KM:</span>
+                <input id="km-${week.id}" type="number" min="0" max="99" step="0.1"
+                       placeholder="${week.distNum}" value="${kmVal}"
+                       class="field-input km-col" style="width:72px"
+                       ${dis} oninput="updateKm(${week.id}, this.value)" />
+                <span class="field-unit">/${week.distNum}</span>
+              </div>
+              <div class="field-group">
+                <span class="field-lbl">TIEMPO:</span>
+                <input id="tm-${week.id}" type="text"
+                       placeholder="0:00:00" value="${tmVal}"
+                       class="field-input time-col" style="width:98px"
+                       ${dis} oninput="updateTime(${week.id}, this.value)" />
+              </div>
+            </div>
+            <div class="mini-bar"><div class="mini-fill" id="minibar-${week.id}" style="width:${kmPct}%"></div></div>
+            <div class="pace-tag" id="pace-${week.id}">${pace}</div>
+          </div>
         </div>
       `;
 
