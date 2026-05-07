@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ponetefit - Plan Victor 21K</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Deep Navy */
+            color: #f1f5f9;
+        }
+
+        .brand-font {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 0.1em;
+        }
+
+        .ponetefit-badge {
+            background-color: #f97316; /* Naranja vibrante */
+            color: #000000;
+            box-shadow: 0 4px 14px 0 rgba(249, 115, 22, 0.39);
+        }
+
+        .week-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .week-card:hover {
+            border-color: #f97316;
+            background: #1e293b;
+        }
+
+        .completed {
+            background: #020617;
+            border-left: 4px solid #10b981 !important;
+            opacity: 0.7;
+        }
+
+        /* Input de tiempo */
+        .time-input {
+            background: #020617;
+            border: 1px solid #334155;
+            color: #f97316;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 120px;
+            margin-top: 8px;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+
+        /* Custom checkbox */
+        input[type="checkbox"] {
+            appearance: none;
+            background-color: transparent;
+            margin: 0;
+            font: inherit;
+            color: #f97316;
+            width: 1.6em;
+            height: 1.6em;
+            border: 2px solid #334155;
+            border-radius: 0.4em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]::before {
+            content: "";
+            width: 0.8em;
+            height: 0.8em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #f97316;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        input[type="checkbox"]:checked::before {
+            transform: scale(1);
+        }
+
+        input[type="checkbox"]:checked {
+            border-color: #f97316;
+        }
+
+        .progress-glow {
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.4);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Encabezado -->
+        <header class="text-center mb-10 pt-6">
+            <div class="inline-block ponetefit-badge px-6 py-2 rounded-full text-sm font-black mb-6 brand-font uppercase italic">
+                PONETEFIT CORRIENDO
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black text-white mb-2 brand-font uppercase tracking-tighter">
+                PLAN <span class="text-orange-500">VICTOR</span> 21K
+            </h1>
+            <p class="text-slate-400 font-bold tracking-widest text-xs uppercase italic">Rumbo a la media maratón pura sangre</p>
+            
+            <!-- Barra de Progreso -->
+            <div class="mt-10 bg-slate-900/80 p-6 rounded-3xl border border-slate-800 backdrop-blur-md">
+                <div class="flex justify-between mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                    <span id="progress-text">PROGRESO: 0%</span>
+                    <span class="text-orange-500">23 AGOSTO - CARRERA</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-4 p-1 border border-slate-800">
+                    <div id="progress-bar" class="bg-gradient-to-r from-orange-600 to-orange-400 h-full rounded-full transition-all duration-1000 progress-glow" style="width: 0%"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Lista de Semanas -->
+        <div id="weeks-container" class="space-y-4">
+            <!-- Dinámico -->
+        </div>
+
+        <footer class="mt-20 text-center border-t border-slate-900 pt-10 text-slate-600 text-[10px] font-bold tracking-[0.3em] uppercase pb-10">
+            <p>Ponetefit Corriendo © 2025 - Registro de Entrenamiento</p>
+        </footer>
+    </div>
+
+    <script>
+        const plan = [
+            // MAYO
+            { id: 1, mes: "MAYO", fecha: "4 Mayo", dist: "8 KM", tipo: "Trote cómodo", desc: "Trote suave para base.", focus: "Base" },
+            { id: 2, mes: "MAYO", fecha: "11 Mayo", dist: "8 KM", tipo: "Intervalos", desc: "2 km suaves + 4 km ritmo un poco más rápido + 2 km suaves.", focus: "Ritmo" },
+            { id: 3, mes: "MAYO", fecha: "18 Mayo", dist: "10 KM", tipo: "Trote suave", desc: "Mantener ritmo constante.", focus: "Fondo" },
+            { id: 4, mes: "MAYO", fecha: "25 Mayo", dist: "7 KM", tipo: "Trote muy suave", desc: "Muy tranqui. Semana de recuperación.", focus: "Relax" },
+            
+            // JUNIO
+            { id: 5, mes: "JUNIO", fecha: "1 Junio", dist: "10 KM", tipo: "Cambios de ritmo", desc: "2 min rápido por 2 min suaves hasta llegar a los 10 km.", focus: "Potencia" },
+            { id: 6, mes: "JUNIO", fecha: "8 Junio", dist: "12 KM", tipo: "Trote suave", desc: "Sumando volumen sin prisa.", focus: "Km+" },
+            { id: 7, mes: "JUNIO", fecha: "15 Junio", dist: "13 KM", tipo: "Trote de resistencia", desc: "Llegando si o si a los kilómetros.", focus: "Dureza" },
+            { id: 8, mes: "JUNIO", fecha: "22 Junio", dist: "8 KM", tipo: "Trote tranqui", desc: "Recuperación activa.", focus: "Relax" },
+            { id: 9, mes: "JUNIO", fecha: "29 Junio", dist: "14 KM", tipo: "Progresivos", desc: "Cada 2km ir un poquito más rápido.", focus: "Mejora" },
+            
+            // JULIO
+            { id: 10, mes: "JULIO", fecha: "6 Julio", dist: "16 KM", tipo: "Trote suave", desc: "Sumando km, lo importante es llegar.", focus: "Fondo" },
+            { id: 11, mes: "JULIO", fecha: "13 Julio", dist: "16 KM", tipo: "Ritmo Carrera", desc: "8 km suaves + 3 km a ritmo de carrera + 5 km suaves.", focus: "Test" },
+            { id: 12, mes: "JULIO", fecha: "20 Julio", dist: "10 KM", tipo: "Trote muy tranqui", desc: "Soltando carga.", focus: "Relax" },
+            { id: 13, mes: "JULIO", fecha: "27 Julio", dist: "18 KM", tipo: "Trote suave", desc: "Tirada larga. ¡Anota tu tiempo!", focus: "Pico", hasTime: true },
+            
+            // AGOSTO
+            { id: 14, mes: "AGOSTO", fecha: "3 Agosto", dist: "21 KM", tipo: "Trote muy tranquilo", desc: "Primera vez en la distancia. ¡Anota tu tiempo!", focus: "Hito", hasTime: true },
+            { id: 15, mes: "AGOSTO", fecha: "10 Agosto", dist: "21 KM (+10K)", tipo: "Doble Estímulo", desc: "Un día 10 KM suave con 4 piques. Otro día 21 km. ¡Anota tiempo!", focus: "Elite", hasTime: true },
+            { id: 16, mes: "AGOSTO", fecha: "17 Agosto", dist: "6 KM", tipo: "Regenerativo", desc: "Solo para mover las piernas y estirar bien.", focus: "Calma" },
+            { id: 17, mes: "AGOSTO", fecha: "23 AGO", dist: "21.1 KM", tipo: "CARRERA", desc: "El gran día. ¡Anota tu tiempo final!", focus: "META", hasTime: true }
+        ];
+
+        let completedWeeks = JSON.parse(localStorage.getItem('ponetefit_victor_21k_v2')) || [];
+        let timesData = JSON.parse(localStorage.getItem('ponetefit_victor_times')) || {};
+        const container = document.getElementById('weeks-container');
+
+        function renderPlan() {
+            container.innerHTML = '';
+            plan.forEach(week => {
+                const isCompleted = completedWeeks.includes(week.id);
+                const card = document.createElement('div');
+                card.className = `week-card p-6 rounded-2xl flex items-start gap-6 ${isCompleted ? 'completed' : ''}`;
+                
+                let timeInputHtml = '';
+                if (week.hasTime) {
+                    const savedTime = timesData[week.id] || '';
+                    timeInputHtml = `
+                        <div class="mt-3">
+                            <label class="block text-[9px] uppercase font-bold text-slate-500 mb-1">Tiempo registrado:</label>
+                            <input type="text" 
+                                   placeholder="00:00:00" 
+                                   value="${savedTime}"
+                                   onchange="saveTime(${week.id}, this.value)"
+                                   class="time-input">
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex-shrink-0 mt-1">
+                        <input type="checkbox" 
+                               ${isCompleted ? 'checked' : ''} 
+                               onchange="toggleWeek(${week.id})">
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-black text-orange-500 uppercase tracking-widest">${week.mes} — ${week.fecha}</span>
+                            <span class="px-2 py-0.5 bg-slate-950 text-slate-500 text-[9px] font-black rounded border border-slate-800 uppercase tracking-tighter">${week.focus}</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white tracking-tight">${week.dist} - ${week.tipo}</h3>
+                        <p class="text-sm text-slate-400 mt-1 leading-relaxed">${week.desc}</p>
+                        ${timeInputHtml}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            updateProgress();
+        }
+
+        window.toggleWeek = function(id) {
+            if (completedWeeks.includes(id)) {
+                completedWeeks = completedWeeks.filter(wId => wId !== id);
+            } else {
+                completedWeeks.push(id);
+            }
+            localStorage.setItem('ponetefit_victor_21k_v2', JSON.stringify(completedWeeks));
+            renderPlan();
+        };
+
+        window.saveTime = function(id, value) {
+            timesData[id] = value;
+            localStorage.setItem('ponetefit_victor_times', JSON.stringify(timesData));
+        };
+
+        function updateProgress() {
+            const percentage = Math.round((completedWeeks.length / plan.length) * 100);
+            const bar = document.getElementById('progress-bar');
+            bar.style.width = percentage + '%';
+            document.getElementById('progress-text').innerText = `PROGRESO: ${percentage}%`;
+        }
+
+        renderPlan();
+    </script>
+</body>
+</html>
