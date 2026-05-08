@@ -218,35 +218,70 @@
 
     /* ── Motivational Modal ── */
     .motiv-overlay {
-      position: fixed; inset: 0; z-index: 9999;
-      background: rgba(2,6,23,.88); backdrop-filter: blur(6px);
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px; opacity: 0; pointer-events: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 9999;
+      background: rgba(2,6,23,.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
       transition: opacity .35s;
     }
     .motiv-overlay.show { opacity: 1; pointer-events: all; }
     .motiv-box {
-      background: var(--surface2); border: 2px solid var(--orange);
-      border-radius: 22px; padding: 36px 28px 30px;
-      max-width: 480px; width: 100%; text-align: center;
+      background: var(--surface2);
+      border: 2px solid var(--orange);
+      border-radius: 22px;
+      padding: clamp(24px, 6vw, 40px) clamp(20px, 5vw, 36px) clamp(22px, 5vw, 34px);
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
       box-shadow: 0 0 60px rgba(249,115,22,.25);
-      transform: scale(.88); transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+      transform: scale(.88);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+      margin: auto;
     }
     .motiv-overlay.show .motiv-box { transform: scale(1); }
     .motiv-box.skip-mode { border-color: #f59e0b; box-shadow: 0 0 40px rgba(245,158,11,.2); }
-    .motiv-emoji { font-size: 3.6rem; line-height: 1; margin-bottom: 14px; }
+    .motiv-emoji {
+      font-size: clamp(2.8rem, 10vw, 3.6rem);
+      line-height: 1;
+      margin-bottom: 14px;
+      display: block;
+      text-align: center;
+    }
     .motiv-text {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(1.4rem,5vw,1.9rem); font-weight: 900;
-      line-height: 1.3; color: #fff; margin-bottom: 24px;
+      font-size: clamp(1.25rem, 5vw, 1.85rem);
+      font-weight: 900;
+      line-height: 1.35;
+      color: #fff;
+      margin-bottom: 26px;
+      text-align: center;
+      word-break: break-word;
+      hyphens: auto;
     }
     .motiv-box.skip-mode .motiv-text { color: #f59e0b; }
     .motiv-close {
-      font-family: 'Orbitron', sans-serif; font-size: .8rem; font-weight: 900;
-      letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
-      background: var(--orange); color: #000; border: none;
-      padding: 14px 36px; border-radius: 12px;
-      box-shadow: 0 0 20px rgba(249,115,22,.35); transition: all .18s;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(.7rem, 2.5vw, .82rem);
+      font-weight: 900;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: clamp(12px,3vw,15px) clamp(24px,6vw,40px);
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(249,115,22,.35);
+      transition: all .18s;
+      display: inline-block;
     }
     .motiv-close:hover { transform: scale(1.04); box-shadow: 0 0 30px rgba(249,115,22,.55); }
     .motiv-box.skip-mode .motiv-close { background: #f59e0b; }
