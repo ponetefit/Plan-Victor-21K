@@ -216,6 +216,41 @@
 
     footer { margin-top: 44px; border-top: 1px solid #0c1526; padding-top: 22px; text-align: center; font-size: .82rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #1e3a5f; }
 
+    /* ── Motivational Modal ── */
+    .motiv-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(2,6,23,.88); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none;
+      transition: opacity .35s;
+    }
+    .motiv-overlay.show { opacity: 1; pointer-events: all; }
+    .motiv-box {
+      background: var(--surface2); border: 2px solid var(--orange);
+      border-radius: 22px; padding: 36px 28px 30px;
+      max-width: 480px; width: 100%; text-align: center;
+      box-shadow: 0 0 60px rgba(249,115,22,.25);
+      transform: scale(.88); transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    .motiv-overlay.show .motiv-box { transform: scale(1); }
+    .motiv-box.skip-mode { border-color: #f59e0b; box-shadow: 0 0 40px rgba(245,158,11,.2); }
+    .motiv-emoji { font-size: 3.6rem; line-height: 1; margin-bottom: 14px; }
+    .motiv-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1.4rem,5vw,1.9rem); font-weight: 900;
+      line-height: 1.3; color: #fff; margin-bottom: 24px;
+    }
+    .motiv-box.skip-mode .motiv-text { color: #f59e0b; }
+    .motiv-close {
+      font-family: 'Orbitron', sans-serif; font-size: .8rem; font-weight: 900;
+      letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
+      background: var(--orange); color: #000; border: none;
+      padding: 14px 36px; border-radius: 12px;
+      box-shadow: 0 0 20px rgba(249,115,22,.35); transition: all .18s;
+    }
+    .motiv-close:hover { transform: scale(1.04); box-shadow: 0 0 30px rgba(249,115,22,.55); }
+    .motiv-box.skip-mode .motiv-close { background: #f59e0b; }
+
     @media (max-width: 480px) {
       .stats { grid-template-columns: repeat(2,1fr); }
       .field-input { font-size: 1.15rem; padding: 11px 13px; }
@@ -272,6 +307,16 @@
   <footer>Ponetefit Corriendo © 2025 · Datos sincronizados con Firebase</footer>
 </div>
 
+<!-- Motivational Modal -->
+<div class="motiv-overlay" id="motivOverlay">
+  <div class="motiv-box" id="motivBox">
+    <div class="motiv-emoji" id="motivEmoji">🔥</div>
+    <div class="motiv-text" id="motivText"></div>
+    <button class="motiv-close" onclick="closeMotiv()">¡A SEGUIR!</button>
+  </div>
+</div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -317,13 +362,86 @@ const plan = [
   {id:12, mes:"JULIO",  fecha:"20 Julio",  dist:"10 KM",     distNum:10,   tipo:"Trote muy tranqui",    desc:"Soltando carga. Dejá que el cuerpo descanse.",                                  focus:"Relax"  },
   {id:13, mes:"JULIO",  fecha:"27 Julio",  dist:"18 KM",     distNum:18,   tipo:"Trote suave",          desc:"Tirada larga. ¡Anotá tu tiempo!",                                              focus:"Pico"   },
   {id:14, mes:"AGOSTO", fecha:"3 Agosto",  dist:"21 KM",     distNum:21,   tipo:"Trote muy tranquilo",  desc:"Primera vez en la distancia completa. ¡Anotá tu tiempo!",                      focus:"Hito"   },
-  {id:15, mes:"AGOSTO", fecha:"10 Agosto", dist:"21 KM+10K", distNum:31,   tipo:"Doble Estímulo",       desc:"Un día 10 km suave con 4 piques. Otro día 21 km. ¡Anotá los tiempos!",         focus:"Elite"  },
+  {id:15, mes:"AGOSTO", fecha:"10 Agosto", dist:"21 KM",     distNum:21,   tipo:"Trote suave",          desc:"Trote suave de 21 km. Disfrutá el recorrido y anotá tu tiempo.",               focus:"Elite"  },
   {id:16, mes:"AGOSTO", fecha:"17 Agosto", dist:"6 KM",      distNum:6,    tipo:"Regenerativo",         desc:"Solo para mover las piernas y estirar bien. Sin exigencia.",                    focus:"Calma"  },
   {id:17, mes:"AGOSTO", fecha:"23 AGO",    dist:"21.1 KM",   distNum:21.1, tipo:"CARRERA 🏁",           desc:"El gran día. Disfrutalo todo. ¡Anotá tu tiempo final!",                        focus:"META",isRace:true},
 ];
 
 const FOCUS_COLORS = {Relax:"#10b981",Calma:"#10b981",Pico:"#f97316",Hito:"#f97316",Elite:"#f97316",META:"#f59e0b"};
 const EMOJIS = [{e:"🔥",label:"¡Quemé todo!"},{e:"💪",label:"Me sentí fuerte"},{e:"😄",label:"Bien"},{e:"😐",label:"Regular"},{e:"😓",label:"Costó"},{e:"🦵",label:"Piernas pesadas"}];
+
+/* ── Frases motivacionales ── */
+const FRASES_DONE = [
+  "¡Sos una bestia! Un paso más cerca de la gloria.",
+  "¡Sos un pura sangre! Seguí así, no bajes el ritmo.",
+  "¡Imparable! Esos 21K ya se empiezan a sentir.",
+  "¡Nivel Leyenda! Esa base aeróbica está quedando de acero.",
+  "¡Qué ritmo, animal! Estás domando la distancia.",
+  "¡Disciplina pura! El éxito es la suma de estos días.",
+  "¡Directo al objetivo! Esos 21.1 km ya tienen tu nombre.",
+  "¡Misión cumplida! Recuperá bien, que te lo ganaste.",
+  "¡Sólido como una roca! Estás transformando tu cuerpo y tu mente.",
+  "¡Brutal! Un entrenamiento menos, un triunfo más.",
+  "¡Esa es la actitud! La media maratón se gana en estos días de barro.",
+  "¡Fuego en las piernas! Hoy le ganaste a la excusa.",
+  "¡No te para nadie! Seguí sumando que en agosto vas a volar.",
+  "¡Trabajo cumplido! Tu mejor versión se construye ahora.",
+  "¡Anotalo y disfrutalo! Ya sos mejor que hace una hora.",
+  "¡Kilómetros a la bolsa! Esa constancia te va a hacer cruzar la meta.",
+  "¡Sos un distinto! No cualquiera se pone el equipo y sale.",
+  "¡Motor encendido! Estás fluyendo como un profesional.",
+  "¡Cada km cuenta! Estás pavimentando el camino a tu mejor tiempo.",
+  "¡Corazón de corredor! Hoy demostraste quién manda.",
+  "¡Qué potencia! Seguí así que vas a llegar sobrado.",
+  "¡Haciendo historia! Tu primer 21K se entrena hoy.",
+  "¡Pura garra! Ni el clima ni el cansancio te frenaron.",
+  "¡Enfocado! Estás haciendo que lo difícil parezca fácil.",
+  "¡Cabeza de hierro! La mente corrió más que las piernas hoy.",
+  "¡Sumando volumen! Tus pulmones te lo van a agradecer en la carrera.",
+  "¡Paso a paso! La meta de agosto está a la vuelta de la esquina.",
+  "¡Sos un tanque! Nada se interpone entre vos y el asfalto.",
+  "¡Excelente entreno! Mañana vas a estar más fuerte todavía.",
+  "¡Sin límites! Estás rompiendo tus propias barreras.",
+  "¡ADN de atleta! Se nota el compromiso en cada zancada."
+];
+const FRASE_RAZA = "¡Sos un ídolo! Completaste otra vez la media maratón, cada día más pura sangre. 🎉";
+const FRASES_SKIP = [
+  "¡Ojo, Víctor! El plan no se corre solo, no te dejes estar.",
+  "¡No te quedes atrás! Los 21.1 km requieren que estés firme.",
+  "¡Recuperá el foco! Si queremos el resultado, hay que poner el trabajo.",
+  "¡Cuidado con la comodidad! El asfalto no perdona la falta de entreno.",
+  "¡Que sea la última! Volvé mañana con más hambre de gloria.",
+  "¡Afilá los dientes! Entrenar es lo que te va a salvar el día de la carrera.",
+  "¡No te me duermas! La constancia es lo único que no se negocia.",
+  "¡A resetear y seguir! No dejes que una falta se convierta en costumbre.",
+  "¡Pensá en la meta! ¿Querés llegar bien o sufriendo? ¡A darle!",
+  "¡Ponete Fit! Recordá por qué empezamos este camino. ¡Mañana revancha!"
+];
+const DONE_EMOJIS = ["🔥","💪","🏆","⚡","🦁","🎯","🚀","💥"];
+const SKIP_EMOJIS = ["⚠️","😤","👊","🎯"];
+
+function showMotiv(frase, isSkip, isRace) {
+  const overlay = document.getElementById('motivOverlay');
+  const box = document.getElementById('motivBox');
+  const emojiEl = document.getElementById('motivEmoji');
+  const textEl = document.getElementById('motivText');
+  box.className = 'motiv-box' + (isSkip ? ' skip-mode' : '');
+  if (isRace) {
+    emojiEl.textContent = '🏅🎉🏃';
+  } else if (isSkip) {
+    emojiEl.textContent = SKIP_EMOJIS[Math.floor(Math.random()*SKIP_EMOJIS.length)];
+  } else {
+    emojiEl.textContent = DONE_EMOJIS[Math.floor(Math.random()*DONE_EMOJIS.length)];
+  }
+  textEl.textContent = frase;
+  overlay.classList.add('show');
+}
+function closeMotiv() {
+  document.getElementById('motivOverlay').classList.remove('show');
+}
+document.getElementById('motivOverlay').addEventListener('click', function(e){
+  if (e.target === this) closeMotiv();
+});
 
 /* ── STATE ──
    Per-session done/skip keys: "sesDone_<id>_s<n>" "sesSkip_<id>_s<n>"
@@ -397,9 +515,19 @@ function toggleSesDone(id, s) {
   const k = sesKey(id,s);
   const wasSkipped = state.sesSkip[k];
   if (wasSkipped) { state.sesSkip[k]=false; }
-  state.sesDone[k] = !state.sesDone[k];
+  const nowDone = !state.sesDone[k];
+  state.sesDone[k] = nowDone;
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
+  if (nowDone) {
+    const w = plan.find(x=>x.id===id);
+    if (w && w.isRace) {
+      showMotiv(FRASE_RAZA, false, true);
+    } else {
+      const frase = FRASES_DONE[Math.floor(Math.random()*FRASES_DONE.length)];
+      showMotiv(frase, false, false);
+    }
+  }
 }
 
 /* ── Session skip toggle ── */
@@ -408,7 +536,8 @@ function toggleSesSkip(id, s) {
   const k = sesKey(id,s);
   const wasDone = state.sesDone[k];
   if (wasDone) { state.sesDone[k]=false; }
-  state.sesSkip[k] = !state.sesSkip[k];
+  const nowSkip = !state.sesSkip[k];
+  state.sesSkip[k] = nowSkip;
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
   // show/hide reason + body
@@ -416,6 +545,10 @@ function toggleSesSkip(id, s) {
   const sb = document.getElementById('ses-body-'+id+'_s'+s);
   if (rr) rr.style.display = state.sesSkip[k]?'flex':'none';
   if (sb) sb.style.display  = state.sesSkip[k]?'none':'flex';
+  if (nowSkip) {
+    const frase = FRASES_SKIP[Math.floor(Math.random()*FRASES_SKIP.length)];
+    showMotiv(frase, true, false);
+  }
 }
 
 function refreshSesUI(id, s) {
