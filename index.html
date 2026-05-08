@@ -1,1 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponetefit · Plan Victor 21K</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #020617;
+      --surface:  #0c1526;
+      --surface2: #111f38;
+      --border:   #1a2d4a;
+      --orange:   #f97316;
+      --orange2:  #fb923c;
+      --green:    #10b981;
+      --purple:   #a78bfa;
+      --muted:    #6b8aaa;
+      --text:     #dde8f5;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Barlow Condensed', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-size: 16px;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(249,115,22,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(249,115,22,.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .hero-glow {
+      position: absolute; width: 700px; height: 400px;
+      background: radial-gradient(ellipse, rgba(249,115,22,.13) 0%, transparent 68%);
+      top: -80px; left: 50%; transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; }
+
+    /* Topbar */
+    .topbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+    .mode-btn {
+      font-family: 'Orbitron', sans-serif; font-size: .62rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; background: transparent;
+      border: 1px solid var(--border); color: var(--muted);
+      padding: 6px 16px; border-radius: 8px; cursor: pointer; transition: all .2s;
+    }
+    .mode-btn.active { color: var(--orange); border-color: rgba(249,115,22,.4); }
+    .mode-btn:hover  { border-color: var(--orange); color: var(--orange); }
+
+    /* Header */
+    header { text-align: center; padding-top: 10px; margin-bottom: 30px; position: relative; }
+    .pill {
+      display: inline-block; background: var(--orange); color: #000;
+      font-family: 'Orbitron', sans-serif; font-size: .65rem; font-weight: 900;
+      letter-spacing: .18em; text-transform: uppercase; padding: 5px 20px;
+      border-radius: 100px; box-shadow: 0 0 24px rgba(249,115,22,.45); margin-bottom: 16px;
+    }
+    h1 { font-family: 'Orbitron', sans-serif; font-size: clamp(2rem, 7.5vw, 3.2rem); font-weight: 900; line-height: 1; text-transform: uppercase; letter-spacing: -.02em; color: #fff; }
+    h1 span { color: var(--orange); }
+    .subtitle { font-size: .75rem; font-weight: 700; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; margin-top: 8px; }
+
+    /* Status */
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 100px; padding: 6px 16px;
+      font-family: 'Orbitron', sans-serif; font-size: .6rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; margin-top: 12px; color: var(--muted); transition: all .4s;
+    }
+    .status-chip.ok    { color: var(--green);  border-color: rgba(16,185,129,.3); }
+    .status-chip.saving{ color: var(--orange); border-color: rgba(249,115,22,.3); }
+    .status-chip.err   { color: #f43f5e;       border-color: rgba(244,63,94,.3); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .dot.pulse { animation: blink .9s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 22px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 8px; text-align: center; }
+    .stat-val { font-family: 'Orbitron', sans-serif; font-size: clamp(1.1rem, 4vw, 1.6rem); font-weight: 900; color: var(--orange); line-height: 1; }
+    .stat-lbl { font-size: .68rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
+
+    /* Progress */
+    .prog-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; margin-top: 12px; }
+    .prog-meta { display: flex; justify-content: space-between; font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+    .prog-meta span:last-child { color: var(--orange); }
+    .track { background: #020617; border-radius: 100px; height: 10px; border: 1px solid var(--border); padding: 2px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, #ea580c, var(--orange), var(--orange2)); box-shadow: 0 0 14px rgba(249,115,22,.4); width: 0%; transition: width .9s cubic-bezier(.4,0,.2,1); }
+
+    /* Month sep */
+    .month-sep {
+      font-family: 'Orbitron', sans-serif; font-size: .62rem; font-weight: 700;
+      letter-spacing: .28em; color: var(--muted); text-transform: uppercase;
+      padding: 6px 0 4px; border-bottom: 1px solid var(--border); margin: 28px 0 12px;
+    }
+
+    /* Cards */
+    .cards { display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 17px; padding: 18px 16px 16px;
+      display: flex; gap: 14px; align-items: flex-start;
+      transition: border-color .2s, background .2s, opacity .3s;
+    }
+    .card:hover { border-color: rgba(249,115,22,.25); background: var(--surface2); }
+    .card.done    { border-left: 3px solid var(--green); opacity: .72; }
+    .card.skipped { border-left: 3px solid #f59e0b; background: rgba(245,158,11,.04); opacity: .75; }
+    .card.race    { background: linear-gradient(135deg, rgba(249,115,22,.07), var(--surface)); border-color: var(--orange); box-shadow: 0 0 28px rgba(249,115,22,.1); }
+    .card.done.race { border-left: 3px solid var(--green); }
+
+    /* Checkbox */
+    input[type=checkbox] {
+      appearance: none; width: 24px; height: 24px; min-width: 24px;
+      border: 2px solid #2d4262; border-radius: 7px;
+      display: grid; place-content: center;
+      cursor: pointer; transition: border-color .2s;
+      background: transparent; flex-shrink: 0; margin-top: 3px;
+    }
+    input[type=checkbox]::before {
+      content: ''; width: 12px; height: 12px;
+      transform: scale(0); transition: 120ms transform ease-in-out;
+      background: var(--orange);
+      clip-path: polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0%,43% 62%);
+    }
+    input[type=checkbox]:checked::before { transform: scale(1); }
+    input[type=checkbox]:checked { border-color: var(--orange); }
+    input[type=checkbox]:disabled { opacity: .4; cursor: default; }
+
+    /* Card body */
+    .card-body { flex-grow: 1; min-width: 0; }
+    .race-banner { font-family: 'Orbitron', sans-serif; font-size: .68rem; font-weight: 900; color: #f59e0b; letter-spacing: .2em; margin-bottom: 6px; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+    .card-date { font-size: .72rem; font-weight: 700; color: var(--orange); letter-spacing: .14em; text-transform: uppercase; }
+    .focus-badge {
+      font-family: 'Orbitron', sans-serif; font-size: .55rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      border-radius: 6px; padding: 3px 9px; white-space: nowrap; border: 1px solid;
+    }
+    .card-title { font-size: clamp(1.05rem, 3.8vw, 1.25rem); font-weight: 900; color: #fff; margin-top: 5px; line-height: 1.2; }
+    .card-desc  { font-size: .95rem; color: #8fb3d5; margin-top: 6px; line-height: 1.5; font-weight: 500; }
+
+    /* Sessions */
+    .sessions-wrap { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+    .session-block {
+      background: rgba(2,6,23,.5);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .session-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .6rem; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .session-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* Fields row */
+    .fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .field-group { display: flex; align-items: center; gap: 6px; }
+    .field-lbl { font-size: .68rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+    .field-input {
+      background: #020617; border: 1px solid #1a2d4a; border-radius: 8px;
+      font-family: 'Orbitron', sans-serif; font-size: .75rem; padding: 6px 10px;
+      transition: border-color .2s, box-shadow .2s; color: var(--orange);
+    }
+    .field-input.time-col { color: var(--purple); }
+    .field-input:focus { outline: none; }
+    .field-input.km-col:focus   { border-color: var(--orange);  box-shadow: 0 0 0 2px rgba(249,115,22,.12); }
+    .field-input.time-col:focus { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(167,139,250,.12); }
+    .field-input:disabled { opacity: .4; cursor: default; }
+    .field-unit { font-family: 'Orbitron', sans-serif; font-size: .65rem; color: var(--muted); }
+
+    /* Mini bar */
+    .mini-bar { height: 3px; background: rgba(249,115,22,.13); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+    .mini-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg,#ea580c,var(--orange)); transition: width .45s ease; }
+
+    /* Pace */
+    .pace-tag { margin-top: 7px; font-family: 'Orbitron', sans-serif; font-size: .62rem; font-weight: 700; color: var(--green); letter-spacing: .1em; }
+
+    /* Feeling */
+    .feeling-wrap { margin-top: 10px; }
+    .feeling-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .feeling-emoji-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+    .emoji-btn {
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 10px; cursor: pointer;
+      font-size: 1.15rem; line-height: 1; transition: all .18s;
+    }
+    .emoji-btn:hover:not(:disabled) { background: rgba(249,115,22,.1); border-color: var(--orange); transform: scale(1.12); }
+    .emoji-btn.selected { background: rgba(249,115,22,.18); border-color: var(--orange); box-shadow: 0 0 8px rgba(249,115,22,.25); transform: scale(1.08); }
+    .emoji-btn:disabled { opacity: .35; cursor: default; }
+    .feeling-input {
+      width: 100%; background: #020617; border: 1px solid #1e3a5f;
+      border-radius: 10px; font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1rem; font-weight: 500; color: #c8ddf2; padding: 9px 13px;
+      resize: none; transition: border-color .2s; line-height: 1.45;
+    }
+    .feeling-input::placeholder { color: #3d5a80; }
+    .feeling-input:focus { outline: none; border-color: rgba(167,139,250,.5); box-shadow: 0 0 0 2px rgba(167,139,250,.08); }
+    .feeling-input:disabled { opacity: .4; cursor: default; }
+
+    /* Skip */
+    .skip-btn {
+      font-family: 'Orbitron', sans-serif; font-size: .58rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; background: transparent;
+      border: 1px solid #2d4262; color: var(--muted); padding: 5px 12px;
+      border-radius: 7px; cursor: pointer; transition: all .2s; white-space: nowrap;
+    }
+    .skip-btn:hover       { border-color: #f59e0b; color: #f59e0b; }
+    .skip-btn.is-skipped  { border-color: #f59e0b44; color: #f59e0b; background: rgba(245,158,11,.08); }
+    .skip-btn:disabled    { opacity: .35; cursor: default; }
+
+    /* Reason */
+    .reason-wrap { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .reason-input {
+      flex: 1; min-width: 160px; background: #020617;
+      border: 1px solid #f59e0b44; border-radius: 8px;
+      font-family: 'Barlow Condensed', sans-serif; font-size: .92rem; font-weight: 600;
+      color: #f59e0b; padding: 6px 11px; transition: border-color .2s;
+    }
+    .reason-input::placeholder { color: #3d5a80; }
+    .reason-input:focus { outline: none; border-color: #f59e0b; }
+    .reason-input:disabled { opacity: .4; cursor: default; }
+
+    /* Read-only banner */
+    .readonly-banner {
+      margin-top: 26px; background: rgba(249,115,22,.05);
+      border: 1px solid rgba(249,115,22,.18); border-radius: 14px;
+      padding: 14px 18px; text-align: center;
+    }
+    .readonly-banner p:first-child { font-family: 'Orbitron', sans-serif; font-size: .68rem; color: var(--orange); letter-spacing: .15em; }
+    .readonly-banner p:last-child  { font-size: .88rem; color: var(--muted); margin-top: 5px; }
+
+    /* Footer */
+    footer { margin-top: 44px; border-top: 1px solid #0c1526; padding-top: 22px; text-align: center; font-size: .65rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #1e3a5f; }
+
+    @media (max-width: 420px) {
+      .stats { grid-template-columns: repeat(2,1fr); }
+      .field-input { font-size: .7rem; padding: 5px 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <button class="mode-btn" id="modeBtn" onclick="toggleMode()">👁 Modo entrenador</button>
+  </div>
+
+  <header>
+    <div class="hero-glow"></div>
+    <div class="pill">PONETEFIT CORRIENDO</div>
+    <h1>PLAN <span>VICTOR</span> 21K</h1>
+    <p class="subtitle">Rumbo a la media maratón · 23 AGOSTO</p>
+
+    <div id="statusChip" class="status-chip">
+      <span class="dot pulse"></span>
+      <span id="statusText">CONECTANDO...</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-val" id="statPct">0%</div>
+        <div class="stat-lbl">Progreso</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statKm">0</div>
+        <div class="stat-lbl">KM corridos</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statSes" style="color:var(--green)">0</div>
+        <div class="stat-lbl">Completadas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statSkip" style="color:#f59e0b">0</div>
+        <div class="stat-lbl">Salteadas</div>
+      </div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-meta">
+        <span id="progText">PROGRESO: 0%</span>
+        <span>META: 23 AGO</span>
+      </div>
+      <div class="track"><div class="fill" id="progFill"></div></div>
+    </div>
+  </header>
+
+  <div id="planContainer"></div>
+
+  <div class="readonly-banner" id="readonlyBanner" style="display:none">
+    <p>👁 MODO ENTRENADOR · SOLO LECTURA</p>
+    <p>Los datos se actualizan en tiempo real desde Firebase.</p>
+  </div>
+
+  <footer>Ponetefit Corriendo © 2025 · Datos sincronizados con Firebase</footer>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey:            "AIzaSyCH7Bdex6rKmVMEv2L7sMYvPwuXLnRnbe0",
+  authDomain:        "victor-21k.firebaseapp.com",
+  databaseURL:       "https://victor-21k-default-rtdb.firebaseio.com",
+  projectId:         "victor-21k",
+  storageBucket:     "victor-21k.firebasestorage.app",
+  messagingSenderId: "678606482850",
+  appId:             "1:678606482850:web:f34983a046b70b2c47d6fb"
+};
+firebase.initializeApp(firebaseConfig);
+const db  = firebase.database();
+const ref = db.ref("victor/plan");
+
+/* ── PLAN ── */
+const plan = [
+  { id:1,  mes:"MAYO",   fecha:"4 Mayo",    dist:"8 KM",       distNum:8,    tipo:"Trote cómodo",        desc:"Trote suave para construir la base aeróbica.",                                    focus:"Base"     },
+  { id:2,  mes:"MAYO",   fecha:"11 Mayo",   dist:"8 KM",       distNum:8,    tipo:"Intervalos",           desc:"2 km suaves + 4 km ritmo más rápido + 2 km suaves.",                             focus:"Ritmo"    },
+  { id:3,  mes:"MAYO",   fecha:"18 Mayo",   dist:"10 KM",      distNum:10,   tipo:"Trote suave",          desc:"Mantener ritmo constante y disfrutar el recorrido.",                              focus:"Fondo"    },
+  { id:4,  mes:"MAYO",   fecha:"25 Mayo",   dist:"7 KM",       distNum:7,    tipo:"Trote muy suave",      desc:"Muy tranqui. Semana de recuperación activa.",                                     focus:"Relax"    },
+  { id:5,  mes:"JUNIO",  fecha:"1 Junio",   dist:"10 KM",      distNum:10,   tipo:"Cambios de ritmo",     desc:"2 min rápido por 2 min suaves hasta los 10 km.",                                 focus:"Potencia" },
+  { id:6,  mes:"JUNIO",  fecha:"8 Junio",   dist:"12 KM",      distNum:12,   tipo:"Trote suave",          desc:"Sumando volumen sin prisa. Disfrutá el proceso.",                                focus:"Km+"      },
+  { id:7,  mes:"JUNIO",  fecha:"15 Junio",  dist:"13 KM",      distNum:13,   tipo:"Trote de resistencia", desc:"Llegando sí o sí a los kilómetros. Cabeza firme.",                               focus:"Dureza"   },
+  { id:8,  mes:"JUNIO",  fecha:"22 Junio",  dist:"8 KM",       distNum:8,    tipo:"Trote tranqui",        desc:"Recuperación activa. Soltá el cuerpo.",                                          focus:"Relax"    },
+  { id:9,  mes:"JUNIO",  fecha:"29 Junio",  dist:"14 KM",      distNum:14,   tipo:"Progresivos",          desc:"Cada 2 km ir un poquito más rápido.",                                           focus:"Mejora"   },
+  { id:10, mes:"JULIO",  fecha:"6 Julio",   dist:"16 KM",      distNum:16,   tipo:"Trote suave",          desc:"Sumando km, lo importante es llegar. Sin apuro.",                                focus:"Fondo"    },
+  { id:11, mes:"JULIO",  fecha:"13 Julio",  dist:"16 KM",      distNum:16,   tipo:"Ritmo Carrera",        desc:"8 km suaves + 3 km a ritmo de carrera + 5 km suaves.",                          focus:"Test"     },
+  { id:12, mes:"JULIO",  fecha:"20 Julio",  dist:"10 KM",      distNum:10,   tipo:"Trote muy tranqui",    desc:"Soltando carga. Dejá que el cuerpo descanse.",                                   focus:"Relax"    },
+  { id:13, mes:"JULIO",  fecha:"27 Julio",  dist:"18 KM",      distNum:18,   tipo:"Trote suave",          desc:"Tirada larga. ¡Anotá tu tiempo!",                                               focus:"Pico"     },
+  { id:14, mes:"AGOSTO", fecha:"3 Agosto",  dist:"21 KM",      distNum:21,   tipo:"Trote muy tranquilo",  desc:"Primera vez en la distancia completa. ¡Anotá tu tiempo!",                       focus:"Hito"     },
+  { id:15, mes:"AGOSTO", fecha:"10 Agosto", dist:"21 KM+10K",  distNum:31,   tipo:"Doble Estímulo",       desc:"Un día 10 km suave con 4 piques. Otro día 21 km. ¡Anotá los tiempos!",          focus:"Elite"    },
+  { id:16, mes:"AGOSTO", fecha:"17 Agosto", dist:"6 KM",       distNum:6,    tipo:"Regenerativo",         desc:"Solo para mover las piernas y estirar bien. Sin exigencia.",                     focus:"Calma"    },
+  { id:17, mes:"AGOSTO", fecha:"23 AGO",    dist:"21.1 KM",    distNum:21.1, tipo:"CARRERA 🏁",           desc:"El gran día. Disfrutalo todo. ¡Anotá tu tiempo final!",                         focus:"META", isRace:true },
+];
+
+const FOCUS_COLORS = {
+  Relax:"#10b981", Calma:"#10b981",
+  Pico:"#f97316",  Hito:"#f97316", Elite:"#f97316",
+  META:"#f59e0b"
+};
+
+const EMOJIS = [
+  { e:"🔥", label:"¡Quemé todo!" },
+  { e:"💪", label:"Me sentí fuerte" },
+  { e:"😄", label:"Bien" },
+  { e:"😐", label:"Regular" },
+  { e:"😓", label:"Costó" },
+  { e:"🦵", label:"Piernas pesadas" },
+];
+
+/* ── STATE ── */
+let state = { completed:[], skipped:[], reasons:{}, km:{}, time:{}, feeling:{}, feelingEmoji:{} };
+let viewMode = false;
+let saveTimer = null;
+let isConnected = false;
+
+/* ── STATUS ── */
+function setStatus(type, text) {
+  const chip = document.getElementById('statusChip');
+  chip.className = 'status-chip ' + type;
+  chip.querySelector('.dot').className = 'dot' + (type==='saving'?' pulse':'');
+  document.getElementById('statusText').textContent = text;
+}
+
+/* ── FIREBASE ── */
+ref.on('value', snap => {
+  const val = snap.val();
+  if (val) state = {
+    completed:    val.completed    || [],
+    skipped:      val.skipped      || [],
+    reasons:      val.reasons      || {},
+    km:           val.km           || {},
+    time:         val.time         || {},
+    feeling:      val.feeling      || {},
+    feelingEmoji: val.feelingEmoji || {}
+  };
+  if (!isConnected) { isConnected = true; setStatus('ok','SINCRONIZADO'); }
+  else { setStatus('ok','ACTUALIZADO'); setTimeout(() => setStatus('ok','EN LÍNEA'), 1800); }
+  renderStats();
+  updateCards();
+}, err => { setStatus('err','SIN CONEXIÓN'); console.error(err); });
+
+function persist() {
+  clearTimeout(saveTimer);
+  setStatus('saving','GUARDANDO...');
+  saveTimer = setTimeout(() => {
+    ref.set(state)
+      .then(() => { setStatus('ok','✓ GUARDADO'); setTimeout(()=>setStatus('ok','EN LÍNEA'),2500); })
+      .catch(() => setStatus('err','ERROR AL GUARDAR'));
+  }, 700);
+}
+
+/* ── ACTIONS ── */
+function toggleWeek(id) {
+  if (viewMode) return;
+  const i = state.completed.indexOf(id);
+  if (i > -1) state.completed.splice(i,1);
+  else {
+    state.completed.push(id);
+    const si = state.skipped.indexOf(id);
+    if (si > -1) { state.skipped.splice(si,1); delete state.reasons[id]; }
+  }
+  persist(); renderStats(); refreshCardClass(id);
+}
+
+function toggleSkip(id) {
+  if (viewMode) return;
+  const si = state.skipped.indexOf(id);
+  if (si > -1) { state.skipped.splice(si,1); delete state.reasons[id]; }
+  else {
+    state.skipped.push(id);
+    const ci = state.completed.indexOf(id);
+    if (ci > -1) state.completed.splice(ci,1);
+  }
+  persist(); renderStats(); refreshCardClass(id);
+  const isSkipped = state.skipped.includes(id);
+  const rr = document.getElementById('reason-row-'+id);
+  const sb = document.getElementById('skip-btn-'+id);
+  const cb = document.getElementById('cb-'+id);
+  const sw = document.getElementById('sessions-wrap-'+id);
+  if (rr) rr.style.display = isSkipped ? 'flex' : 'none';
+  if (sb) { sb.className = 'skip-btn'+(isSkipped?' is-skipped':''); }
+  if (cb) cb.disabled = isSkipped || viewMode;
+  if (sw) sw.style.display = isSkipped ? 'none' : 'flex';
+}
+
+function updateReason(id, v) {
+  if (viewMode) return;
+  if (v.trim()==='') delete state.reasons[id]; else state.reasons[id]=v.trim();
+  persist();
+}
+
+function refreshCardClass(id) {
+  const card = document.getElementById('card-'+id);
+  if (!card) return;
+  const w = plan.find(x=>x.id===id);
+  const done = state.completed.includes(id), skip = state.skipped.includes(id);
+  card.className = `card${done?' done':''}${skip?' skipped':''}${w.isRace?' race':''}`;
+}
+
+// session = 1 or 2
+function updateKm(id, session, val) {
+  if (viewMode) return;
+  const key = id+'_s'+session;
+  if (val==='') delete state.km[key]; else state.km[key] = parseFloat(val)||0;
+  persist(); renderStats(); updatePace(id, session); updateMiniBar(id, session);
+}
+function updateTime(id, session, val) {
+  if (viewMode) return;
+  const key = id+'_s'+session;
+  if (val==='') delete state.time[key]; else state.time[key]=val;
+  persist(); updatePace(id, session);
+}
+function updateFeeling(id, session, val) {
+  if (viewMode) return;
+  const key = id+'_s'+session;
+  if (val.trim()==='') delete state.feeling[key]; else state.feeling[key]=val;
+  persist();
+}
+function toggleEmoji(id, session, emoji) {
+  if (viewMode) return;
+  const key = id+'_s'+session;
+  state.feelingEmoji[key] = (state.feelingEmoji[key]===emoji) ? '' : emoji;
+  persist();
+  // update UI
+  document.querySelectorAll(`.emoji-btn[data-key="${key}"]`).forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.emoji === state.feelingEmoji[key]);
+  });
+}
+
+function calcPace(id, session) {
+  const w = plan.find(x=>x.id===id);
+  const key = id+'_s'+session;
+  const km = parseFloat(state.km[key]||0);
+  const tm = state.time[key]||'';
+  if (!km||!tm) return '';
+  const p = tm.split(':').map(Number);
+  let s = p.length===3 ? p[0]*3600+p[1]*60+p[2] : p.length===2 ? p[0]*60+p[1] : 0;
+  if (!s) return '';
+  const ps=s/km, pm=Math.floor(ps/60), ss=Math.round(ps%60).toString().padStart(2,'0');
+  return `PACE: ${pm}:${ss} min/km`;
+}
+function updatePace(id, session) {
+  const el = document.getElementById(`pace-${id}_s${session}`);
+  if (el) el.textContent = calcPace(id, session);
+}
+function updateMiniBar(id, session) {
+  const w = plan.find(x=>x.id===id);
+  const el = document.getElementById(`minibar-${id}_s${session}`);
+  if (el) {
+    const pct = Math.min(100, ((parseFloat(state.km[id+'_s'+session])||0)/w.distNum)*100);
+    el.style.width = pct+'%';
+  }
+}
+
+function renderStats() {
+  const done = state.completed.length, skip = state.skipped.length;
+  const pct = Math.round((done/plan.length)*100);
+  const totalKm = Object.values(state.km).reduce((s,v)=>s+(parseFloat(v)||0),0);
+  document.getElementById('statPct').textContent  = pct+'%';
+  document.getElementById('statKm').textContent   = totalKm%1===0?totalKm:totalKm.toFixed(1);
+  document.getElementById('statSes').textContent  = done;
+  document.getElementById('statSkip').textContent = skip;
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progText').textContent = `COMPLETADAS: ${done} · SALTEADAS: ${skip}`;
+}
+
+function updateCards() {
+  plan.forEach(w => {
+    const card = document.getElementById('card-'+w.id);
+    if (!card) return;
+    const done = state.completed.includes(w.id), skip = state.skipped.includes(w.id);
+    card.className = `card${done?' done':''}${skip?' skipped':''}${w.isRace?' race':''}`;
+    const cb = document.getElementById('cb-'+w.id);
+    if (cb) { cb.checked = done; cb.disabled = skip||viewMode; }
+    const sb = document.getElementById('skip-btn-'+w.id);
+    if (sb) { sb.className='skip-btn'+(skip?' is-skipped':''); sb.disabled=viewMode; }
+    const rr = document.getElementById('reason-row-'+w.id);
+    if (rr) rr.style.display = skip?'flex':'none';
+    const ri = document.getElementById('reason-'+w.id);
+    if (ri&&document.activeElement!==ri) ri.value=state.reasons[w.id]||'';
+    const sw = document.getElementById('sessions-wrap-'+w.id);
+    if (sw) sw.style.display = skip?'none':'flex';
+
+    [1,2].forEach(s => {
+      const key = w.id+'_s'+s;
+      const kmi = document.getElementById('km-'+key);
+      if (kmi&&document.activeElement!==kmi) kmi.value=state.km[key]||'';
+      const tmi = document.getElementById('tm-'+key);
+      if (tmi&&document.activeElement!==tmi) tmi.value=state.time[key]||'';
+      const fi = document.getElementById('feeling-'+key);
+      if (fi&&document.activeElement!==fi) fi.value=state.feeling[key]||'';
+      document.querySelectorAll(`.emoji-btn[data-key="${key}"]`).forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.emoji===state.feelingEmoji[key]);
+      });
+      updatePace(w.id, s); updateMiniBar(w.id, s);
+    });
+  });
+}
+
+function buildSessionBlock(w, session, dis) {
+  const key     = w.id+'_s'+session;
+  const kmVal   = state.km[key]   || '';
+  const tmVal   = state.time[key] || '';
+  const feelVal = state.feeling[key]   || '';
+  const emojiV  = state.feelingEmoji[key] || '';
+  const kmNum   = parseFloat(kmVal)||0;
+  const kmPct   = Math.min(100,(kmNum/w.distNum)*100);
+  const pace    = calcPace(w.id, session);
+
+  const label   = session===1 ? '🏃 Sesión 1 — Primer entrenamiento' : '🏃 Sesión 2 — Segundo entrenamiento';
+
+  return `
+    <div class="session-block">
+      <div class="session-label">${label}</div>
+      <div class="fields">
+        <div class="field-group">
+          <span class="field-lbl">KM:</span>
+          <input id="km-${key}" type="number" min="0" max="99" step="0.1"
+                 placeholder="${w.distNum}" value="${kmVal}"
+                 class="field-input km-col" style="width:74px"
+                 ${dis} oninput="updateKm(${w.id},${session},this.value)" />
+          <span class="field-unit">/${w.distNum}</span>
+        </div>
+        <div class="field-group">
+          <span class="field-lbl">TIEMPO:</span>
+          <input id="tm-${key}" type="text"
+                 placeholder="0:00:00" value="${tmVal}"
+                 class="field-input time-col" style="width:100px"
+                 ${dis} oninput="updateTime(${w.id},${session},this.value)" />
+        </div>
+      </div>
+      <div class="mini-bar"><div class="mini-fill" id="minibar-${key}" style="width:${kmPct}%"></div></div>
+      <div class="pace-tag" id="pace-${key}">${pace}</div>
+
+      <div class="feeling-wrap">
+        <div class="feeling-label-row">
+          <span class="field-lbl" style="color:var(--purple)">¿Cómo te sentiste?</span>
+        </div>
+        <div class="feeling-emoji-row">
+          ${EMOJIS.map(em=>`
+            <button class="emoji-btn${emojiV===em.e?' selected':''}"
+                    data-key="${key}" data-emoji="${em.e}"
+                    title="${em.label}"
+                    ${dis} onclick="toggleEmoji(${w.id},${session},'${em.e}')">${em.e}</button>
+          `).join('')}
+        </div>
+        <textarea id="feeling-${key}"
+                  class="feeling-input"
+                  rows="2"
+                  placeholder="Contá cómo estuvo el entreno: energía, piernas, ánimo, clima..."
+                  ${dis}
+                  oninput="updateFeeling(${w.id},${session},this.value)">${feelVal}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function renderPlan() {
+  const container = document.getElementById('planContainer');
+  const months = [...new Set(plan.map(w=>w.mes))];
+  months.forEach(mes => {
+    const sep = document.createElement('div');
+    sep.className = 'month-sep'; sep.textContent = mes;
+    container.appendChild(sep);
+    const group = document.createElement('div');
+    group.className = 'cards';
+    plan.filter(w=>w.mes===mes).forEach(w => {
+      const done    = state.completed.includes(w.id);
+      const skipped = state.skipped.includes(w.id);
+      const reason  = state.reasons[w.id]||'';
+      const fColor  = FOCUS_COLORS[w.focus]||'#3d5a80';
+      const dis     = viewMode ? 'disabled' : '';
+      const cbDis   = (viewMode||skipped) ? 'disabled' : '';
+
+      const card = document.createElement('div');
+      card.id        = 'card-'+w.id;
+      card.className = `card${done?' done':''}${skipped?' skipped':''}${w.isRace?' race':''}`;
+
+      card.innerHTML = `
+        <input id="cb-${w.id}" type="checkbox" ${done?'checked':''} ${cbDis} onchange="toggleWeek(${w.id})" />
+        <div class="card-body">
+          ${w.isRace ? `<div class="race-banner">🏁 DÍA DE CARRERA</div>` : ''}
+          <div class="card-top">
+            <span class="card-date">${w.mes} · ${w.fecha}</span>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span class="focus-badge" style="color:${fColor};border-color:${fColor}44;background:${fColor}11">${w.focus}</span>
+              <button id="skip-btn-${w.id}" class="skip-btn${skipped?' is-skipped':''}" ${dis} onclick="toggleSkip(${w.id})">
+                ${skipped?'↩ Deshacer':'✕ Salteada'}
+              </button>
+            </div>
+          </div>
+          <div class="card-title">${w.dist} — ${w.tipo}</div>
+          <div class="card-desc">${w.desc}</div>
+
+          <div id="reason-row-${w.id}" class="reason-wrap" style="display:${skipped?'flex':'none'}">
+            <span class="field-lbl" style="color:#f59e0b">Motivo:</span>
+            <input id="reason-${w.id}" type="text"
+                   placeholder="ej: viaje, lesión, lluvia..."
+                   value="${reason}" class="reason-input" ${dis}
+                   oninput="updateReason(${w.id}, this.value)" />
+          </div>
+
+          <div id="sessions-wrap-${w.id}" class="sessions-wrap" style="display:${skipped?'none':'flex'}">
+            ${buildSessionBlock(w, 1, dis)}
+            ${buildSessionBlock(w, 2, dis)}
+          </div>
+        </div>
+      `;
+      group.appendChild(card);
+    });
+    container.appendChild(group);
+  });
+}
+
+function toggleMode() {
+  viewMode = !viewMode;
+  const btn = document.getElementById('modeBtn');
+  btn.textContent = viewMode ? '✏️ Modo alumno' : '👁 Modo entrenador';
+  btn.className   = 'mode-btn'+(viewMode?' active':'');
+  document.getElementById('readonlyBanner').style.display = viewMode ? 'block' : 'none';
+  document.getElementById('planContainer').innerHTML = '';
+  renderPlan();
+}
+
+renderPlan();
+</script>
+</body>
 </html>
