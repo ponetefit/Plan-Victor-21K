@@ -457,6 +457,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey:"AIzaSyCH7Bdex6rKmVMEv2L7sMYvPwuXLnRnbe0",
@@ -470,6 +471,67 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const ref = db.ref("victor/plan");
+
+/* ── EmailJS ── */
+emailjs.init('pIF4UMAYIqyKAtWRZ');
+
+function sendNotification(id, s, tipo) {
+  // tipo: 'done' | 'undone' | 'skip' | 'unskip'
+  const w = plan.find(x => x.id === id);
+  if (!w) return;
+  const k = sesKey(id, s);
+  const sesLabel = w.isRace ? 'La Carrera' : (s === 1 ? 'Sesión 1' : 'Sesión 2');
+
+  // Asunto
+  const iconos = { done:'✅', undone:'↩️', skip:'❌', unskip:'↩️' };
+  const acciones = { done:'completó', undone:'deshizo', skip:'saltó', unskip:'deshizo el salto de' };
+  const icono = iconos[tipo];
+  const accion = acciones[tipo];
+  const asunto = `${icono} Víctor ${accion} ${sesLabel} — ${w.dist} ${w.tipo} (${w.mes} · ${w.fecha})`;
+
+  // Detalle según tipo
+  let detalle = '';
+  if (tipo === 'done') {
+    const km      = state.km[k]           ? `${state.km[k]} km` : 'No registrado';
+    const tiempo  = state.time[k]         ? state.time[k]        : 'No registrado';
+    const pace    = calcPace(id, s)       || 'No calculado';
+    const emoji   = state.feelingEmoji[k] || '—';
+    const feeling = state.feeling[k]      || 'Sin comentario';
+    detalle = `
+📏 Kilómetros: ${km} / ${w.distNum} km
+⏱️ Tiempo: ${tiempo}
+🏃 ${pace}
+${emoji} Cómo se sintió: ${feeling}`;
+  } else if (tipo === 'skip') {
+    const motivo = state.reasons['ses_'+id+'_s'+s] || 'Sin motivo especificado';
+    detalle = `\n⚠️ Motivo: ${motivo}`;
+  } else if (tipo === 'undone') {
+    detalle = '\nDesmarcó la sesión como hecha.';
+  } else if (tipo === 'unskip') {
+    detalle = '\nDesmarcó la sesión como salteada.';
+  }
+
+  const cuerpo = `Hola Raffa,
+
+Víctor acaba de actualizar su entrenamiento:
+
+📅 Semana: ${w.mes} · ${w.fecha}
+🏅 Tipo: ${w.dist} — ${w.tipo}
+📝 Descripción: ${w.desc}
+🎯 Sesión: ${sesLabel}
+${detalle}
+
+—
+Ponetefit Corriendo · Plan Víctor 21K`;
+
+  emailjs.send('service_3hzil2m', 'template_g26bgb4', {
+    to_email: 'raffa687@gmail.com',
+    to_name:  'Raffa',
+    subject:  asunto,
+    message:  cuerpo,
+    reply_to: 'raffa687@gmail.com',
+  }).catch(err => console.warn('EmailJS error:', err));
+}
 
 /* ── Font scale ── */
 let fontScale = parseFloat(localStorage.getItem('vfs')||'1');
@@ -662,6 +724,7 @@ function toggleSesDone(id, s) {
   state.sesDone[k] = nowDone;
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
+  sendNotification(id, s, nowDone ? 'done' : 'undone');
   if (nowDone) {
     const w = plan.find(x=>x.id===id);
     if (w && w.isRace) {
@@ -683,6 +746,7 @@ function toggleSesSkip(id, s) {
   state.sesSkip[k] = nowSkip;
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
+  sendNotification(id, s, nowSkip ? 'skip' : 'unskip');
   // show/hide reason + body
   const rr = document.getElementById('reason-row-'+id+'_s'+s);
   const sb = document.getElementById('ses-body-'+id+'_s'+s);
