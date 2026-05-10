@@ -711,6 +711,8 @@ function toggleSesDone(id, s) {
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
   refreshReportBtn(id,s);
+  const fs = document.getElementById('feeling-section-'+sesKey(id,s));
+  if (fs) fs.style.display = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
   if (!nowDone) sendNotification(id, s, 'undone');
   if (nowDone) {
     const w = plan.find(x=>x.id===id);
@@ -738,8 +740,10 @@ function toggleSesSkip(id, s) {
   // show/hide reason + body
   const rr = document.getElementById('reason-row-'+id+'_s'+s);
   const sb = document.getElementById('ses-body-'+id+'_s'+s);
+  const fs = document.getElementById('feeling-section-'+sesKey(id,s));
   if (rr) rr.style.display = state.sesSkip[k]?'flex':'none';
   if (sb) sb.style.display  = state.sesSkip[k]?'none':'flex';
+  if (fs) fs.style.display  = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
   if (nowSkip) {
     const frase = FRASES_SKIP[Math.floor(Math.random()*FRASES_SKIP.length)];
     showMotiv(frase, true, false);
@@ -973,10 +977,19 @@ function updateCards() {
     weekSessions(w.id).forEach(s=>{
       const k = sesKey(w.id,s);
       refreshSesUI(w.id,s);
+      // reason row
       const rr = document.getElementById('reason-row-'+w.id+'_s'+s);
       if (rr) rr.style.display = state.sesSkip[k]?'flex':'none';
+      // restore reason input value
+      const ri = document.getElementById('reason-input-'+k);
+      if (ri && document.activeElement!==ri) ri.value = state.reasons['ses_'+w.id+'_s'+s]||'';
+      // ses-body (km/time)
       const sb_ = document.getElementById('ses-body-'+w.id+'_s'+s);
       if (sb_) sb_.style.display = state.sesSkip[k]?'none':'flex';
+      // feeling section visible if done or skipped
+      const fs = document.getElementById('feeling-section-'+k);
+      if (fs) fs.style.display = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
+      // restore field values
       const kmi = document.getElementById('km-'+k);
       if (kmi&&document.activeElement!==kmi) kmi.value=state.km[k]||'';
       const tmi = document.getElementById('tm-'+k);
@@ -987,6 +1000,8 @@ function updateCards() {
         btn.classList.toggle('selected', btn.dataset.emoji===state.feelingEmoji[k]);
       });
       updatePace(w.id,s); updateMiniBar(w.id,s);
+      // report btn + photo section
+      refreshReportBtn(w.id,s);
     });
   });
 }
@@ -1024,7 +1039,7 @@ function buildSessionBlock(w, s, dis) {
 
   <div id="reason-row-${k}" class="reason-wrap" style="display:${isSkip?'flex':'none'}">
     <span class="field-lbl" style="color:#f59e0b">Motivo:</span>
-    <input type="text" class="reason-input"
+    <input type="text" id="reason-input-${k}" class="reason-input"
       placeholder="ej: viaje, lesión, lluvia..."
       value="${reason}" ${dis}
       oninput="updateReason(${w.id},${s},this.value)" />
@@ -1052,21 +1067,21 @@ function buildSessionBlock(w, s, dis) {
     </div>
     <div class="mini-bar"><div class="mini-fill" id="minibar-${k}" style="width:${kmPct}%"></div></div>
     <div class="pace-tag" id="pace-${k}">${pace}</div>
+  </div>
 
-    <div class="feeling-wrap">
-      <div class="feeling-label">¿Cómo te sentiste?</div>
-      <div class="feeling-emoji-row">
-        ${EMOJIS.map(em=>`
-          <button class="emoji-btn${emojiV===em.e?' selected':''}"
-            data-key="${k}" data-emoji="${em.e}" title="${em.label}"
-            ${dis} onclick="toggleEmoji(${w.id},${s},'${em.e}')">${em.e}</button>
-        `).join('')}
-      </div>
-      <textarea id="feeling-${k}" class="feeling-input" rows="2"
-        placeholder="Contá cómo estuvo el entreno: energía, piernas, ánimo, clima..."
-        ${dis}
-        oninput="updateFeeling(${w.id},${s},this.value)">${feelVal}</textarea>
+  <div id="feeling-section-${k}" class="feeling-wrap" style="display:${(isDone||isSkip)?'block':'none'}">
+    <div class="feeling-label">¿Cómo te sentiste?</div>
+    <div class="feeling-emoji-row">
+      ${EMOJIS.map(em=>`
+        <button class="emoji-btn${emojiV===em.e?' selected':''}"
+          data-key="${k}" data-emoji="${em.e}" title="${em.label}"
+          ${dis} onclick="toggleEmoji(${w.id},${s},'${em.e}')">${em.e}</button>
+      `).join('')}
     </div>
+    <textarea id="feeling-${k}" class="feeling-input" rows="2"
+      placeholder="Contá cómo estuvo el entreno: energía, piernas, ánimo, clima..."
+      ${dis}
+      oninput="updateFeeling(${w.id},${s},this.value)">${feelVal}</textarea>
   </div>
 
   <div style="display:flex;justify-content:flex-end;margin-top:10px;">
