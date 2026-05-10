@@ -223,7 +223,10 @@
       background: rgba(2,6,23,.5); border: 1px solid var(--border);
       border-radius: clamp(12px,3.5vw,16px);
       padding: clamp(14px,4vw,20px) clamp(14px,4vw,20px) clamp(12px,3vw,16px);
+      transition: border-color .3s, box-shadow .3s;
     }
+    .session-block.ses-is-done   { border-color: var(--green); box-shadow: 0 0 0 1px rgba(16,185,129,.15) inset; }
+    .session-block.ses-is-skipped { border-color: #ef4444;    box-shadow: 0 0 0 1px rgba(239,68,68,.12) inset; }
     .session-header {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: clamp(12px,3.5vw,18px); flex-wrap: wrap; gap: 10px;
@@ -711,8 +714,10 @@ function toggleSesDone(id, s) {
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
   refreshReportBtn(id,s);
-  const fs = document.getElementById('feeling-section-'+sesKey(id,s));
-  if (fs) fs.style.display = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
+  const blkD = document.getElementById('sesblock-'+k);
+  const sbD  = document.getElementById('ses-body-'+id+'_s'+s);
+  if (blkD) { blkD.classList.toggle('ses-is-done', !!state.sesDone[k]); blkD.classList.toggle('ses-is-skipped', false); }
+  if (sbD)  sbD.style.display = state.sesDone[k] ? 'flex' : 'none';
   if (!nowDone) sendNotification(id, s, 'undone');
   if (nowDone) {
     const w = plan.find(x=>x.id===id);
@@ -737,13 +742,13 @@ function toggleSesSkip(id, s) {
   refreshSesUI(id,s);
   refreshReportBtn(id,s);
   if (!nowSkip) sendNotification(id, s, 'unskip');
-  // show/hide reason + body
-  const rr = document.getElementById('reason-row-'+id+'_s'+s);
-  const sb = document.getElementById('ses-body-'+id+'_s'+s);
-  const fs = document.getElementById('feeling-section-'+sesKey(id,s));
-  if (rr) rr.style.display = state.sesSkip[k]?'flex':'none';
-  if (sb) sb.style.display  = state.sesSkip[k]?'none':'flex';
-  if (fs) fs.style.display  = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
+  // show/hide reason + body + block class
+  const rr  = document.getElementById('reason-row-'+id+'_s'+s);
+  const sb  = document.getElementById('ses-body-'+id+'_s'+s);
+  const blk = document.getElementById('sesblock-'+k);
+  if (rr)  rr.style.display  = state.sesSkip[k] ? 'flex' : 'none';
+  if (sb)  sb.style.display  = state.sesDone[k] ? 'flex' : 'none';
+  if (blk) { blk.classList.toggle('ses-is-done', !!state.sesDone[k]); blk.classList.toggle('ses-is-skipped', !!state.sesSkip[k]); }
   if (nowSkip) {
     const frase = FRASES_SKIP[Math.floor(Math.random()*FRASES_SKIP.length)];
     showMotiv(frase, true, false);
@@ -977,19 +982,21 @@ function updateCards() {
     weekSessions(w.id).forEach(s=>{
       const k = sesKey(w.id,s);
       refreshSesUI(w.id,s);
-      // reason row
+      // session block border color
+      const blk = document.getElementById('sesblock-'+k);
+      if (blk) {
+        blk.classList.toggle('ses-is-done',    !!state.sesDone[k]);
+        blk.classList.toggle('ses-is-skipped', !!state.sesSkip[k]);
+      }
+      // reason row (skip only)
       const rr = document.getElementById('reason-row-'+w.id+'_s'+s);
-      if (rr) rr.style.display = state.sesSkip[k]?'flex':'none';
-      // restore reason input value
+      if (rr) rr.style.display = state.sesSkip[k] ? 'flex' : 'none';
       const ri = document.getElementById('reason-input-'+k);
       if (ri && document.activeElement!==ri) ri.value = state.reasons['ses_'+w.id+'_s'+s]||'';
-      // ses-body (km/time)
-      const sb_ = document.getElementById('ses-body-'+w.id+'_s'+s);
-      if (sb_) sb_.style.display = state.sesSkip[k]?'none':'flex';
-      // feeling section visible if done or skipped
-      const fs = document.getElementById('feeling-section-'+k);
-      if (fs) fs.style.display = (state.sesDone[k]||state.sesSkip[k])?'block':'none';
-      // restore field values
+      // ses-body: km/time/feeling — only when done
+      const sb = document.getElementById('ses-body-'+w.id+'_s'+s);
+      if (sb) sb.style.display = state.sesDone[k] ? 'flex' : 'none';
+      // restore done fields
       const kmi = document.getElementById('km-'+k);
       if (kmi&&document.activeElement!==kmi) kmi.value=state.km[k]||'';
       const tmi = document.getElementById('tm-'+k);
@@ -1000,7 +1007,7 @@ function updateCards() {
         btn.classList.toggle('selected', btn.dataset.emoji===state.feelingEmoji[k]);
       });
       updatePace(w.id,s); updateMiniBar(w.id,s);
-      // report btn + photo section
+      // photo + report btn
       refreshReportBtn(w.id,s);
     });
   });
@@ -1020,9 +1027,10 @@ function buildSessionBlock(w, s, dis) {
   const rkKey   = 'ses_'+w.id+'_s'+s;
   const reason  = state.reasons[rkKey]||'';
   const label   = w.isRace ? '🏁 La Carrera' : (s===1 ? '🏃 Sesión 1' : '🏃 Sesión 2');
+  const sesClass = isDone ? ' ses-is-done' : isSkip ? ' ses-is-skipped' : '';
 
   return `
-<div class="session-block">
+<div class="session-block${sesClass}" id="sesblock-${k}">
   <div class="session-header">
     <div class="session-label">${label}</div>
     <div class="ses-check-row">
@@ -1037,15 +1045,17 @@ function buildSessionBlock(w, s, dis) {
     </div>
   </div>
 
+  <!-- SKIP: solo motivo -->
   <div id="reason-row-${k}" class="reason-wrap" style="display:${isSkip?'flex':'none'}">
-    <span class="field-lbl" style="color:#f59e0b">Motivo:</span>
+    <span class="field-lbl" style="color:#ef4444">Motivo:</span>
     <input type="text" id="reason-input-${k}" class="reason-input"
       placeholder="ej: viaje, lesión, lluvia..."
       value="${reason}" ${dis}
       oninput="updateReason(${w.id},${s},this.value)" />
   </div>
 
-  <div id="ses-body-${k}" class="ses-body" style="display:${isSkip?'none':'flex'}">
+  <!-- DONE: km, tiempo, feeling -->
+  <div id="ses-body-${k}" class="ses-body" style="display:${isDone?'flex':'none'}">
     <div class="fields">
       <div class="field-group">
         <span class="field-lbl">Kilómetros corridos</span>
@@ -1067,21 +1077,34 @@ function buildSessionBlock(w, s, dis) {
     </div>
     <div class="mini-bar"><div class="mini-fill" id="minibar-${k}" style="width:${kmPct}%"></div></div>
     <div class="pace-tag" id="pace-${k}">${pace}</div>
+
+    <div class="feeling-wrap" style="margin-top:14px">
+      <div class="feeling-label">¿Cómo te sentiste?</div>
+      <div class="feeling-emoji-row">
+        ${EMOJIS.map(em=>`
+          <button class="emoji-btn${emojiV===em.e?' selected':''}"
+            data-key="${k}" data-emoji="${em.e}" title="${em.label}"
+            ${dis} onclick="toggleEmoji(${w.id},${s},'${em.e}')">${em.e}</button>
+        `).join('')}
+      </div>
+      <textarea id="feeling-${k}" class="feeling-input" rows="2"
+        placeholder="Contá cómo estuvo el entreno: energía, piernas, ánimo, clima..."
+        ${dis}
+        oninput="updateFeeling(${w.id},${s},this.value)">${feelVal}</textarea>
+    </div>
   </div>
 
-  <div id="feeling-section-${k}" class="feeling-wrap" style="display:${(isDone||isSkip)?'block':'none'}">
-    <div class="feeling-label">¿Cómo te sentiste?</div>
-    <div class="feeling-emoji-row">
-      ${EMOJIS.map(em=>`
-        <button class="emoji-btn${emojiV===em.e?' selected':''}"
-          data-key="${k}" data-emoji="${em.e}" title="${em.label}"
-          ${dis} onclick="toggleEmoji(${w.id},${s},'${em.e}')">${em.e}</button>
-      `).join('')}
+  <!-- Foto + botón envío (visible en done o skip) -->
+  <div id="photo-section-${k}" class="photo-section" style="display:${(isDone||isSkip)?'block':'none'}">
+    <div class="photo-label">📸 Adjuntar foto (opcional)</div>
+    <label class="photo-upload-btn" for="photo-input-${k}">📂 Elegir foto</label>
+    <input type="file" id="photo-input-${k}" accept="image/*" capture="environment"
+      style="display:none" onchange="handlePhotoSelect('${k}', this)" />
+    <div id="photo-preview-${k}" class="photo-preview-wrap" style="display:none">
+      <img id="photo-img-${k}" class="photo-thumb" />
+      <button class="photo-remove-btn" onclick="removePhoto('${k}')">✕ Quitar</button>
     </div>
-    <textarea id="feeling-${k}" class="feeling-input" rows="2"
-      placeholder="Contá cómo estuvo el entreno: energía, piernas, ánimo, clima..."
-      ${dis}
-      oninput="updateFeeling(${w.id},${s},this.value)">${feelVal}</textarea>
+    <div id="photo-status-${k}" class="photo-status"></div>
   </div>
 
   <div style="display:flex;justify-content:flex-end;margin-top:10px;">
@@ -1090,21 +1113,6 @@ function buildSessionBlock(w, s, dis) {
       onclick="sendReport(${w.id},${s})">
       📧 Enviar reporte a Raffa
     </button>
-  </div>
-
-  <div id="photo-section-${k}" class="photo-section" style="display:${(isDone||isSkip)?'block':'none'}">
-    <div class="photo-label">📸 Adjuntar foto (opcional)</div>
-    <label class="photo-upload-btn" for="photo-input-${k}">
-      📂 Elegir foto
-    </label>
-    <input type="file" id="photo-input-${k}" accept="image/*" capture="environment"
-      style="display:none"
-      onchange="handlePhotoSelect('${k}', this)" />
-    <div id="photo-preview-${k}" class="photo-preview-wrap" style="display:none">
-      <img id="photo-img-${k}" class="photo-thumb" />
-      <button class="photo-remove-btn" onclick="removePhoto('${k}')">✕ Quitar</button>
-    </div>
-    <div id="photo-status-${k}" class="photo-status"></div>
   </div>
 </div>`;
 }
