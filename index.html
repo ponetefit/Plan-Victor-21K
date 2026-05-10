@@ -636,7 +636,7 @@ document.getElementById('motivOverlay').addEventListener('click', function(e){
    Per-session done/skip keys: "sesDone_<id>_s<n>" "sesSkip_<id>_s<n>"
    km, time, feeling, feelingEmoji keys: "<id>_s<n>"
 */
-let state = {sesDone:{},sesSkip:{},reasons:{},km:{},time:{},feeling:{},feelingEmoji:{}};
+let state = {sesDone:{},sesSkip:{},reasons:{},km:{},time:{},feeling:{},feelingEmoji:{},reported:{}};
 let viewMode = false;
 let saveTimer = null;
 let isConnected = false;
@@ -657,7 +657,8 @@ ref.on('value', snap => {
     km:           v.km           || {},
     time:         v.time         || {},
     feeling:      v.feeling      || {},
-    feelingEmoji: v.feelingEmoji || {}
+    feelingEmoji: v.feelingEmoji || {},
+    reported:     v.reported     || {}
   };
   if (!isConnected) { isConnected=true; setStatus('ok','SINCRONIZADO'); }
   else { setStatus('ok','ACTUALIZADO'); setTimeout(()=>setStatus('ok','EN LÍNEA'),1800); }
@@ -711,6 +712,7 @@ function toggleSesDone(id, s) {
   if (wasSkipped) { state.sesSkip[k]=false; }
   const nowDone = !state.sesDone[k];
   state.sesDone[k] = nowDone;
+  if (!nowDone) delete state.reported[k]; // reset so button reappears if re-marked
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
   refreshReportBtn(id,s);
@@ -738,6 +740,7 @@ function toggleSesSkip(id, s) {
   if (wasDone) { state.sesDone[k]=false; }
   const nowSkip = !state.sesSkip[k];
   state.sesSkip[k] = nowSkip;
+  if (!nowSkip) delete state.reported[k]; // reset so button reappears if re-marked
   persist(); renderStats(); refreshCardClass(id);
   refreshSesUI(id,s);
   refreshReportBtn(id,s);
@@ -764,13 +767,15 @@ function refreshSesUI(id, s) {
 }
 
 function refreshReportBtn(id, s) {
-  const k = sesKey(id,s);
-  const btn = document.getElementById('reportbtn-'+k);
+  const k        = sesKey(id,s);
+  const btn      = document.getElementById('reportbtn-'+k);
   const photoSec = document.getElementById('photo-section-'+k);
   if (!btn) return;
-  const active = state.sesDone[k] || state.sesSkip[k];
-  btn.style.display = active ? 'inline-flex' : 'none';
-  if (photoSec) photoSec.style.display = active ? 'block' : 'none';
+  const active    = state.sesDone[k] || state.sesSkip[k];
+  const reported  = !!state.reported[k];
+  // If already reported: hide button and photo section entirely
+  btn.style.display      = (active && !reported) ? 'inline-flex' : 'none';
+  if (photoSec) photoSec.style.display = (active && !reported) ? 'block' : 'none';
   btn.dataset.sent = '';
 }
 
@@ -893,7 +898,11 @@ Ponetefit Corriendo · Plan Víctor 21K`;
     message:  cuerpo,
     reply_to: 'raffa687@gmail.com',
   }).then(() => {
-    if (btn) { btn.textContent = '✅ Mail enviado'; btn.disabled = false; btn.dataset.sent = '1'; }
+    state.reported[k] = true;
+    persist();
+    if (btn) btn.style.display = 'none';
+    const photoSec = document.getElementById('photo-section-'+k);
+    if (photoSec) photoSec.style.display = 'none';
   }).catch(err => {
     console.warn('EmailJS error:', err);
     if (btn) { btn.textContent = '❌ Error, reintentá'; btn.disabled = false; }
@@ -1027,7 +1036,9 @@ function buildSessionBlock(w, s, dis) {
   const rkKey   = 'ses_'+w.id+'_s'+s;
   const reason  = state.reasons[rkKey]||'';
   const label   = w.isRace ? '🏁 La Carrera' : (s===1 ? '🏃 Sesión 1' : '🏃 Sesión 2');
-  const sesClass = isDone ? ' ses-is-done' : isSkip ? ' ses-is-skipped' : '';
+  const sesClass  = isDone ? ' ses-is-done' : isSkip ? ' ses-is-skipped' : '';
+  const reported  = !!state.reported[k];
+  const showSend  = (isDone || isSkip) && !reported;
 
   return `
 <div class="session-block${sesClass}" id="sesblock-${k}">
@@ -1094,8 +1105,8 @@ function buildSessionBlock(w, s, dis) {
     </div>
   </div>
 
-  <!-- Foto + botón envío (visible en done o skip) -->
-  <div id="photo-section-${k}" class="photo-section" style="display:${(isDone||isSkip)?'block':'none'}">
+  <!-- Foto + botón envío (visible en done o skip, solo si no se reportó) -->
+  <div id="photo-section-${k}" class="photo-section" style="display:${showSend?'block':'none'}">
     <div class="photo-label">📸 Adjuntar foto (opcional)</div>
     <label class="photo-upload-btn" for="photo-input-${k}">📂 Elegir foto</label>
     <input type="file" id="photo-input-${k}" accept="image/*" capture="environment"
@@ -1109,7 +1120,7 @@ function buildSessionBlock(w, s, dis) {
 
   <div style="display:flex;justify-content:flex-end;margin-top:10px;">
     <button id="reportbtn-${k}" class="report-send-btn"
-      style="display:${(isDone||isSkip)?'inline-flex':'none'}"
+      style="display:${showSend?'inline-flex':'none'}"
       onclick="sendReport(${w.id},${s})">
       📧 Enviar reporte a Raffa
     </button>
