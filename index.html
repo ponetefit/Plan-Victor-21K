@@ -325,6 +325,25 @@
     .report-send-btn:disabled { opacity:.6; cursor:not-allowed; }
     .report-send-btn[data-sent="1"] { border-color:#10b981; color:#10b981; background:linear-gradient(135deg,#0a2a1f,#061a12); }
 
+    /* Photo upload */
+    .photo-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .photo-label { font-size:.8em; font-weight:700; letter-spacing:.08em; color:#94a3b8; margin-bottom:8px; }
+    .photo-upload-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px dashed var(--border);
+      border-radius: 8px; color: #94a3b8; font-family: 'Barlow Condensed', sans-serif;
+      font-size: .85em; font-weight: 600; letter-spacing: .06em;
+      padding: 7px 14px; cursor: pointer; transition: all .2s;
+    }
+    .photo-upload-btn:hover { border-color: var(--orange); color: var(--orange); }
+    .photo-preview-wrap { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .photo-remove-btn {
+      background: none; border: 1px solid #ef4444; border-radius: 6px;
+      color: #ef4444; font-size: .78em; padding: 4px 10px; cursor: pointer;
+    }
+    .photo-status { font-size: .78em; color: #94a3b8; margin-top: 6px; min-height: 16px; }
+
     /* Skip reason */
     .reason-wrap { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .reason-input {
@@ -738,19 +757,88 @@ function refreshSesUI(id, s) {
 function refreshReportBtn(id, s) {
   const k = sesKey(id,s);
   const btn = document.getElementById('reportbtn-'+k);
+  const photoSec = document.getElementById('photo-section-'+k);
   if (!btn) return;
   const active = state.sesDone[k] || state.sesSkip[k];
   btn.style.display = active ? 'inline-flex' : 'none';
+  if (photoSec) photoSec.style.display = active ? 'block' : 'none';
   btn.dataset.sent = '';
 }
 
-function sendReport(id, s) {
-  const btn = document.getElementById('reportbtn-'+sesKey(id,s));
-  const k = sesKey(id,s);
+/* ── Foto ── */
+const IMGBB_KEY = '21e42dfe30bf55183d84a22c35b32df5';
+const photoFiles = {};
+const photoUrls  = {};
+
+function handlePhotoSelect(k, input) {
+  const file = input.files[0];
+  if (!file) return;
+  photoFiles[k] = file;
+  delete photoUrls[k];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img    = document.getElementById('photo-img-'+k);
+    const wrap   = document.getElementById('photo-preview-'+k);
+    const status = document.getElementById('photo-status-'+k);
+    if (img)    img.src = e.target.result;
+    if (wrap)   wrap.style.display = 'flex';
+    if (status) status.textContent = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(k) {
+  delete photoFiles[k];
+  delete photoUrls[k];
+  const wrap   = document.getElementById('photo-preview-'+k);
+  const input  = document.getElementById('photo-input-'+k);
+  const status = document.getElementById('photo-status-'+k);
+  if (wrap)   wrap.style.display = 'none';
+  if (input)  input.value = '';
+  if (status) status.textContent = '';
+}
+
+async function uploadPhoto(k) {
+  if (photoUrls[k]) return photoUrls[k];
+  const file = photoFiles[k];
+  if (!file) return null;
+  const b64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const form = new FormData();
+  form.append('key', IMGBB_KEY);
+  form.append('image', b64);
+  const resp = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body:form });
+  const data = await resp.json();
+  if (data.success) { photoUrls[k] = data.data.url; return data.data.url; }
+  throw new Error('imgBB upload failed');
+}
+
+async function sendReport(id, s) {
+  const k   = sesKey(id, s);
+  const btn = document.getElementById('reportbtn-'+k);
   const tipo = state.sesDone[k] ? 'done' : state.sesSkip[k] ? 'skip' : null;
   if (!tipo) return;
+
   if (btn) { btn.textContent = '⏳ Enviando...'; btn.disabled = true; }
-  const w = plan.find(x => x.id === id);
+
+  // Upload photo if selected
+  let photoUrl = null;
+  if (photoFiles[k]) {
+    const status = document.getElementById('photo-status-'+k);
+    if (status) status.textContent = '📤 Subiendo foto...';
+    try {
+      photoUrl = await uploadPhoto(k);
+      if (status) status.textContent = '✅ Foto subida';
+    } catch(e) {
+      if (status) status.textContent = '⚠️ No se pudo subir la foto, se envía sin ella';
+    }
+  }
+
+  const w        = plan.find(x => x.id === id);
   const sesLabel = w.isRace ? 'La Carrera' : (s === 1 ? 'Sesión 1' : 'Sesión 2');
   const iconos   = { done:'✅', skip:'❌' };
   const acciones = { done:'completó', skip:'saltó' };
@@ -769,10 +857,12 @@ function sendReport(id, s) {
 🏃 ${pace}
 ${emoji} Cómo se sintió: ${feeling}`;
   } else {
-    const motivo = state.reasons['ses_'+id+'_s'+s] || 'Sin motivo especificado';
+    const motivo  = state.reasons['ses_'+id+'_s'+s] || 'Sin motivo especificado';
     const feeling = state.feeling[k] || 'Sin comentario';
     detalle = `\n⚠️ Motivo del salto: ${motivo}\n💬 Comentario: ${feeling}`;
   }
+
+  const fotoLinea = photoUrl ? `\n\n📸 Foto del entrenamiento:\n${photoUrl}` : '';
 
   const cuerpo = `Hola Raffa,
 
@@ -782,7 +872,7 @@ Víctor acaba de reportar su entrenamiento:
 🏅 Tipo: ${w.dist} — ${w.tipo}
 📝 Descripción: ${w.desc}
 🎯 Sesión: ${sesLabel}
-${detalle}
+${detalle}${fotoLinea}
 
 —
 Ponetefit Corriendo · Plan Víctor 21K`;
@@ -985,6 +1075,21 @@ function buildSessionBlock(w, s, dis) {
       onclick="sendReport(${w.id},${s})">
       📧 Enviar reporte a Raffa
     </button>
+  </div>
+
+  <div id="photo-section-${k}" class="photo-section" style="display:${(isDone||isSkip)?'block':'none'}">
+    <div class="photo-label">📸 Adjuntar foto (opcional)</div>
+    <label class="photo-upload-btn" for="photo-input-${k}">
+      📂 Elegir foto
+    </label>
+    <input type="file" id="photo-input-${k}" accept="image/*" capture="environment"
+      style="display:none"
+      onchange="handlePhotoSelect('${k}', this)" />
+    <div id="photo-preview-${k}" class="photo-preview-wrap" style="display:none">
+      <img id="photo-img-${k}" class="photo-thumb" />
+      <button class="photo-remove-btn" onclick="removePhoto('${k}')">✕ Quitar</button>
+    </div>
+    <div id="photo-status-${k}" class="photo-status"></div>
   </div>
 </div>`;
 }
