@@ -1108,9 +1108,14 @@ function buildSessionBlock(w, s, dis) {
   <!-- Foto + botón envío (visible en done o skip, solo si no se reportó) -->
   <div id="photo-section-${k}" class="photo-section" style="display:${showSend?'block':'none'}">
     <div class="photo-label">📸 Adjuntar foto (opcional)</div>
-    <label class="photo-upload-btn" for="photo-input-${k}">📂 Elegir foto</label>
-    <input type="file" id="photo-input-${k}" accept="image/*" capture="environment"
-      style="display:none" onchange="handlePhotoSelect('${k}', this)" />
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <label class="photo-upload-btn" for="photo-input-cam-${k}">📷 Sacar foto</label>
+      <input type="file" id="photo-input-cam-${k}" accept="image/*" capture="environment"
+        style="display:none" onchange="handlePhotoSelect('${k}', this)" />
+      <label class="photo-upload-btn" for="photo-input-gal-${k}">🖼️ Elegir de galería</label>
+      <input type="file" id="photo-input-gal-${k}" accept="image/*"
+        style="display:none" onchange="handlePhotoSelect('${k}', this)" />
+    </div>
     <div id="photo-preview-${k}" class="photo-preview-wrap" style="display:none">
       <img id="photo-img-${k}" class="photo-thumb" />
       <button class="photo-remove-btn" onclick="removePhoto('${k}')">✕ Quitar</button>
